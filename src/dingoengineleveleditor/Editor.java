@@ -211,8 +211,8 @@ public class Editor extends Engine{
         
         iconSkin = new Skin();
         try {
-            iconSkin.setBaseImage(getClass().getResource("/resources/icons.png").getFile());
-            iconSkin.bufferSkinDef(getClass().getResource("/resources/icons_def.png").getFile());
+            iconSkin.setBaseImage("icons/icons.png");
+            iconSkin.bufferSkinDef("icons/icons_def.png");
         } catch (IOException ex) {
             Logger.getLogger(Editor.class.getName()).log(Level.SEVERE, null, ex);
         }
