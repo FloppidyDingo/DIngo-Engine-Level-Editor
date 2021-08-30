@@ -125,6 +125,7 @@ public class ProjectManager {
                         light.setGreen(Integer.parseInt(reader.readLine()));
                         light.setBrightness(Float.parseFloat(reader.readLine()));
                         light.setRadius(Float.parseFloat(reader.readLine()));
+                        light.setAmbient(Boolean.parseBoolean(reader.readLine()));
                         
                         node.setUserData(light);
                         
@@ -256,6 +257,8 @@ public class ProjectManager {
                     writer.write(Float.toString(light.getBrightness()));
                     writer.newLine();
                     writer.write(Float.toString(light.getRadius()));
+                    writer.newLine();
+                    writer.write(Boolean.toString(light.isAmbient()));
                     writer.newLine();
                     writer.write(editor.getCodeManager().getCustomTag(node));
                     writer.newLine();

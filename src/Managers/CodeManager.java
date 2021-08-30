@@ -165,6 +165,8 @@ public class CodeManager {
             code += light.getGreen();
             code += "\" blue=\"";
             code += light.getBlue();
+            code += "\" radius=\"";
+            code += light.getRadius();
             code += "\" ";
             code += tag.getCustomTag();
             code += " >";
@@ -288,7 +290,7 @@ public class CodeManager {
                     writer.newLine();
                     for (Node compileNode : compileList) {
                         if(getTag(compileNode).equals(tag)){
-                            writer.write(compileNode.getX() + "," + compileNode.getY() + ";");
+                            writer.write(compileNode.getX() + "," + -compileNode.getY() + ";");
                             tempList.add(compileNode);
                         }
                     }
