@@ -5,6 +5,7 @@
  */
 package dingoengineleveleditor;
 
+import java.io.File;
 import javax.swing.JFileChooser;
 import objects.Project;
 
@@ -146,9 +147,13 @@ public class NewProject extends javax.swing.JFrame {
         // TODO add your handling code here:
         JFileChooser chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        if(!editor.getConfigManager().getLastOpenedLocation().equals("default")){
+            chooser.setCurrentDirectory(new File(editor.getConfigManager().getLastOpenedLocation()));
+        }
         int option = chooser.showOpenDialog(this);
         if (option == JFileChooser.APPROVE_OPTION) {
             txtFolder.setText(chooser.getSelectedFile().getPath() + "\\");
+            editor.getConfigManager().setLastOpenedLocation(txtFolder.getText());
         }
     }//GEN-LAST:event_btnBrowseActionPerformed
 
@@ -160,7 +165,7 @@ public class NewProject extends javax.swing.JFrame {
         project.setHeader(txtHeader.getText());
         project.setPath(txtFolder.getText());
         
-        editor.setActiveProject(project);
+        editor.setProject(project);
         editor.saveProject();
         
         this.setVisible(false);

@@ -5,7 +5,6 @@
  */
 package Managers;
 
-import Engine.Scene;
 import dingoengineleveleditor.Editor;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -16,12 +15,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import objects.Entity;
-import objects.Light;
-import objects.Node;
+import objects.Item;
 import objects.Project;
-import objects.Tile;
-import objects.Trigger;
+import objects.TileSheet;
 
 /**
  *
@@ -29,19 +25,19 @@ import objects.Trigger;
  */
 public class ProjectManager {
     private final Editor editor;
-    
-    public ProjectManager(Editor editor){
+
+    public ProjectManager(Editor editor) {
         this.editor = editor;
     }
     
-    public void loadProject(Scene scene, Project project, String file){
+    public void loadProject(Project project, String file){
         try{
             File input = new File(file);
             BufferedReader reader = new BufferedReader(new FileReader(input));
             
             //perform version check
             String version = reader.readLine();
-            if(!editor.version.equals(version)){
+            if(!editor.getVersion().equals(version)){
                 System.out.println("version check failed");
                 return;
             }
@@ -55,14 +51,16 @@ public class ProjectManager {
             String header = "";
             while(!"?tile_dep".equals(strIn)){
                 header += strIn;
+                header += "\n";
                 strIn = reader.readLine();
             }
+            header = header.substring(0, header.length() - 1);
             project.setHeader(header);
             
             //read tile dependencies
             strIn = reader.readLine();
             while(!"?data".equals(strIn)){
-                editor.getTools().importTile(project.getPath() + strIn, strIn);
+                editor.importTile(project.getPath() + strIn, strIn);
                 strIn = reader.readLine();
             }
             
@@ -71,31 +69,28 @@ public class ProjectManager {
             while(strIn != null){
                 switch(strIn){
                     case "?entity":{
-                        Entity entity = new Entity();
-                        Entity dataEntity = new Entity();
+                        //generate entity item
+                        Item entity = new Item();
+                        entity.setType(Item.ITEM_ENTITY);
                         
                         entity.setID(reader.readLine());
                         entity.setX(Float.parseFloat(reader.readLine()));
                         entity.setY(Float.parseFloat(reader.readLine()));
                         String skinID = reader.readLine();
-                        for (Tile tile : editor.getTiles()) {
-                            if(tile.id.equals(skinID)){
-                                entity.setSkin(tile.skin);
+                        for (TileSheet tile : editor.getTiles()) {
+                            if(tile.getName().equals(skinID)){
+                                entity.setTile(tile);
                             }
                         }
-                        entity.useSkin(Integer.parseInt(reader.readLine()));
-                        dataEntity.setSolid(Boolean.parseBoolean(reader.readLine()));
-                        dataEntity.setMass(Float.parseFloat(reader.readLine()));
-                        dataEntity.setVisible(Boolean.parseBoolean(reader.readLine()));
-                        dataEntity.setOpacity(Float.parseFloat(reader.readLine()));
-                        dataEntity.setCollisionLayer(Integer.parseInt(reader.readLine()));
-                        dataEntity.setInvertX(Boolean.parseBoolean(reader.readLine()));
-                        dataEntity.setInvertY(Boolean.parseBoolean(reader.readLine()));
-                        
-                        entity.setUserData(dataEntity);
-                        
-                        //create XML tags
-                        editor.getCodeManager().genTag(entity);
+                        entity.setFrame(Integer.parseInt(reader.readLine()));
+                        entity.setSolid(Boolean.parseBoolean(reader.readLine()));
+                        entity.setMass(Float.parseFloat(reader.readLine()));
+                        entity.setVisible(Boolean.parseBoolean(reader.readLine()));
+                        entity.setOpacity(Float.parseFloat(reader.readLine()));
+                        entity.setCollisionLayer(Integer.parseInt(reader.readLine()));
+                        entity.setInvertX(Boolean.parseBoolean(reader.readLine()));
+                        entity.setInvertY(Boolean.parseBoolean(reader.readLine()));
+                        entity.setLayer(Integer.parseInt(reader.readLine()));
                         
                         //read custom tag
                         String tagInput = reader.readLine();
@@ -104,22 +99,21 @@ public class ProjectManager {
                             tag += tagInput;
                             tagInput = reader.readLine();
                         }
-                        editor.getCodeManager().setCustomTag(entity, tag);
+                        
+                        //create XML tags
+                        editor.getCodeManager().genTag(entity, tag);
                         
                         //add entity to scene
-                        scene.attachGUIChild(entity);
-                        editor.getNodeList().add(entity);
+                        editor.getItems().add(entity);
                         break;
                     }
                     case "?light":{
-                        Entity node = new Entity(editor.getIconSkin(), null);
-                        node.useSkin(0);
+                        Item light = new Item();
+                        light.setType(Item.ITEM_LIGHT);
                         
-                        Light light = new Light();
-                        
-                        light.setId(reader.readLine());
-                        node.setX(Float.parseFloat(reader.readLine()));
-                        node.setY(Float.parseFloat(reader.readLine()));
+                        light.setID(reader.readLine());
+                        light.setX(Float.parseFloat(reader.readLine()));
+                        light.setY(Float.parseFloat(reader.readLine()));
                         light.setRed(Integer.parseInt(reader.readLine()));
                         light.setBlue(Integer.parseInt(reader.readLine()));
                         light.setGreen(Integer.parseInt(reader.readLine()));
@@ -127,11 +121,6 @@ public class ProjectManager {
                         light.setRadius(Float.parseFloat(reader.readLine()));
                         light.setAmbient(Boolean.parseBoolean(reader.readLine()));
                         
-                        node.setUserData(light);
-                        
-                        //create XML tags
-                        editor.getCodeManager().genTag(node);
-                        
                         //read custom tag
                         String tagInput = reader.readLine();
                         String tag = "";
@@ -139,29 +128,23 @@ public class ProjectManager {
                             tag += tagInput;
                             tagInput = reader.readLine();
                         }
-                        editor.getCodeManager().setCustomTag(node, tag);
+                        
+                        //create XML tags
+                        editor.getCodeManager().genTag(light, tag);
                         
                         //add light to scene
-                        scene.attachGUIChild(node);
-                        editor.getNodeList().add(node);
+                        editor.getItems().add(light);
                         break;
                     }
                     case "?trigger":{
-                        Entity node = new Entity(editor.getIconSkin(), null);
-                        node.useSkin(1);
-                        
-                        Trigger trigger = new Trigger(0, 0, 0, 0);
+                        Item trigger = new Item();
+                        trigger.setType(Item.ITEM_TRIGGER);
                         
                         trigger.setID(reader.readLine());
-                        node.setX(Float.parseFloat(reader.readLine()));
-                        node.setY(Float.parseFloat(reader.readLine()));
-                        trigger.setWidth(Integer.parseInt(reader.readLine()));
-                        trigger.setHeight(Integer.parseInt(reader.readLine()));
-                        
-                        node.setUserData(trigger);
-                        
-                        //create XML tags
-                        editor.getCodeManager().genTag(node);
+                        trigger.setX(Float.parseFloat(reader.readLine()));
+                        trigger.setY(Float.parseFloat(reader.readLine()));
+                        trigger.setWidth(Float.parseFloat(reader.readLine()));
+                        trigger.setHeight(Float.parseFloat(reader.readLine()));
                         
                         //read custom tag
                         String tagInput = reader.readLine();
@@ -170,11 +153,12 @@ public class ProjectManager {
                             tag += tagInput;
                             tagInput = reader.readLine();
                         }
-                        editor.getCodeManager().setCustomTag(node, tag);
+                        
+                        //create XML tags
+                        editor.getCodeManager().genTag(trigger, tag);
                         
                         //add light to scene
-                        scene.attachGUIChild(node);
-                        editor.getNodeList().add(node);
+                        editor.getItems().add(trigger);
                         break;
                     }
                 }
@@ -185,7 +169,7 @@ public class ProjectManager {
         }
     }
     
-    public void saveProject(ArrayList<Node> nodeList, ArrayList<Tile> tiles, Project project){
+    public void saveProject(ArrayList<Item> nodeList, ArrayList<TileSheet> tiles, Project project){
         File mapFile = new File(project.getPath() + project.getName() + ".d4m");
         try {
             if (!mapFile.exists()) {
@@ -195,7 +179,7 @@ public class ProjectManager {
             BufferedWriter writer = new BufferedWriter(new FileWriter(mapFile));
             
             //write project details (editor version, name, header)
-            writer.write(editor.version);
+            writer.write(editor.getVersion());
             writer.newLine();
             writer.write(project.getName());
             writer.newLine();
@@ -205,98 +189,100 @@ public class ProjectManager {
             //write tile dependencies
             writer.write("?tile_dep");
             writer.newLine();
-            for (Tile tile : tiles) {
-                writer.write(tile.id);
+            for (TileSheet tile : tiles) {
+                writer.write(tile.getName());
                 writer.newLine();
             }
             
             //dump object data
             writer.write("?data");
             writer.newLine();
-            for (Node node : nodeList) {
-                //use data node to determine object type
-                Object nodeData = node.getUserData();
-                
-                if(nodeData instanceof Trigger){ //trigger
-                    //write trigger data
-                    Trigger trigger = (Trigger)nodeData;
-                    
-                    writer.write("?trigger");
-                    writer.newLine();
-                    writer.write(trigger.getID());
-                    writer.newLine();
-                    writer.write(Float.toString(node.getX()));
-                    writer.newLine();
-                    writer.write(Float.toString(node.getY()));
-                    writer.newLine();
-                    writer.write(Integer.toString(trigger.getWidth()));
-                    writer.newLine();
-                    writer.write(Integer.toString(trigger.getHeight()));
-                    writer.newLine();
-                    writer.write(editor.getCodeManager().getCustomTag(node));
-                    writer.newLine();
-                    writer.write("?end_tag");
-                    writer.newLine();
-                }else if(nodeData instanceof Light){ //light
-                    Light light = (Light)nodeData;
-                    
-                    writer.write("?light");
-                    writer.newLine();
-                    writer.write(light.getId());
-                    writer.newLine();
-                    writer.write(Float.toString(node.getX()));
-                    writer.newLine();
-                    writer.write(Float.toString(node.getY()));
-                    writer.newLine();
-                    writer.write(Integer.toString(light.getRed()));
-                    writer.newLine();
-                    writer.write(Integer.toString(light.getBlue()));
-                    writer.newLine();
-                    writer.write(Integer.toString(light.getGreen()));
-                    writer.newLine();
-                    writer.write(Float.toString(light.getBrightness()));
-                    writer.newLine();
-                    writer.write(Float.toString(light.getRadius()));
-                    writer.newLine();
-                    writer.write(Boolean.toString(light.isAmbient()));
-                    writer.newLine();
-                    writer.write(editor.getCodeManager().getCustomTag(node));
-                    writer.newLine();
-                    writer.write("?end_tag");
-                    writer.newLine();
-                }else{ //entity
-                    Entity entity = (Entity)nodeData;
-                    
-                    writer.write("?entity");
-                    writer.newLine();
-                    writer.write(node.getID());
-                    writer.newLine();
-                    writer.write(Float.toString(node.getX()));
-                    writer.newLine();
-                    writer.write(Float.toString(node.getY()));
-                    writer.newLine();
-                    writer.write(((Entity)node).getSkin().getID());
-                    writer.newLine();
-                    writer.write(Integer.toString(((Entity)node).getFrame()));
-                    writer.newLine();
-                    writer.write(Boolean.toString(entity.isSolid()));
-                    writer.newLine();
-                    writer.write(Float.toString(((Entity)node).getMass()));
-                    writer.newLine();
-                    writer.write(Boolean.toString(entity.isVisible()));
-                    writer.newLine();
-                    writer.write(Float.toString(((Entity)node).getOpacity()));
-                    writer.newLine();
-                    writer.write(Integer.toString(entity.getCollisionLayer()));
-                    writer.newLine();
-                    writer.write(Boolean.toString(entity.isInvertX()));
-                    writer.newLine();
-                    writer.write(Boolean.toString(entity.isInvertY()));
-                    writer.newLine();
-                    writer.write(editor.getCodeManager().getCustomTag(node));
-                    writer.newLine();
-                    writer.write("?end_tag");
-                    writer.newLine();
+            for (Item node : nodeList) {
+                switch (node.getType()) {
+                    case Item.ITEM_TRIGGER:
+                        //trigger
+                        //write trigger data
+                        writer.write("?trigger");
+                        writer.newLine();
+                        writer.write(node.getID());
+                        writer.newLine();
+                        writer.write(Float.toString(node.getX()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getY()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getWidth()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getHeight()));
+                        writer.newLine();
+                        writer.write(node.getCodeTag().getCustomTag());
+                        writer.newLine();
+                        writer.write("?end_tag");
+                        writer.newLine();
+                        break;
+                    case Item.ITEM_LIGHT:
+                        //light
+                        writer.write("?light");
+                        writer.newLine();
+                        writer.write(node.getID());
+                        writer.newLine();
+                        writer.write(Float.toString(node.getX()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getY()));
+                        writer.newLine();
+                        writer.write(Integer.toString(node.getRed()));
+                        writer.newLine();
+                        writer.write(Integer.toString(node.getBlue()));
+                        writer.newLine();
+                        writer.write(Integer.toString(node.getGreen()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getBrightness()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getRadius()));
+                        writer.newLine();
+                        writer.write(Boolean.toString(node.isAmbient()));
+                        writer.newLine();
+                        writer.write(node.getCodeTag().getCustomTag());
+                        writer.newLine();
+                        writer.write("?end_tag");
+                        writer.newLine();
+                        break;
+                    case Item.ITEM_ENTITY:
+                        //entity
+                        writer.write("?entity");
+                        writer.newLine();
+                        writer.write(node.getID());
+                        writer.newLine();
+                        writer.write(Float.toString(node.getX()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getY()));
+                        writer.newLine();
+                        writer.write(node.getTile().getName());
+                        writer.newLine();
+                        writer.write(Integer.toString(node.getFrame()));
+                        writer.newLine();
+                        writer.write(Boolean.toString(node.isSolid()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getMass()));
+                        writer.newLine();
+                        writer.write(Boolean.toString(node.isVisible()));
+                        writer.newLine();
+                        writer.write(Float.toString(node.getOpacity()));
+                        writer.newLine();
+                        writer.write(Integer.toString(node.getCollisionLayer()));
+                        writer.newLine();
+                        writer.write(Boolean.toString(node.isInvertX()));
+                        writer.newLine();
+                        writer.write(Boolean.toString(node.isInvertY()));
+                        writer.newLine();
+                        writer.write(Integer.toString(node.getLayer()));
+                        writer.newLine();
+                        writer.write(node.getCodeTag().getCustomTag());
+                        writer.newLine();
+                        writer.write("?end_tag");
+                        writer.newLine();
+                        break;
+                    default:
+                        break;
                 }
             }
             

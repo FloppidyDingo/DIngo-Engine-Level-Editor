@@ -5,469 +5,1531 @@
  */
 package dingoengineleveleditor;
 
-import Controls.Listeners.GameKeyListener;
+import objects.TileSheet;
 import Managers.CodeManager;
-import Controls.Listeners.GameMouseListener;
-import Engine.Engine;
-import Engine.Scene;
-import Engine.Utils;
+import Managers.ConfigurationManager;
 import Managers.ProjectManager;
-import objects.Light;
-import java.awt.Point;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import motion.Vector;
-import objects.Entity;
-import objects.Node;
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.Timer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileFilter;
+import objects.Item;
 import objects.Project;
-import objects.Skin;
-import objects.Tile;
-import objects.Trigger;
-import org.lwjgl.input.Keyboard;
+import org.apache.commons.io.FileUtils;
 
 /**
  *
  * @author James
  */
-public class Editor extends Engine{
-    private int msx, msy;
-    private boolean left;
-    private boolean right;
-    private boolean up;
-    private boolean down;
-    private final int mseSpeed = 3;
-    
-    public final String version = "1_alpha";
-    
-    private CodeManager codeManager;
-    private ProjectManager projectManager;
-    private ProjectUI projectUI;
-    private NewProject newProject;
-    private Project activeProject;
-    
-    private ArrayList<Node> nodeList;
-    private ArrayList<Tile> tiles;
-    
-    private int editingMode;
-    private int requestedMode;
-    private Tools tools;
-    
-    private Entity activeEntity;
-    private Skin activeSkin;
-    private int activeFrame;
-    private boolean genEntity;
-    private Entity activeLight;
-    private Entity activeTrigger;
-    private Scene activeScene;
-    private Skin iconSkin;
-    
-    //object creation variables
-    private Entity creationEntity;
-    private Light creationLight;
-    private Trigger creationTrigger;
+public class Editor extends javax.swing.JFrame {
+    private final String version = "2_alpha";
+    public static final int PLACE_ENTITY = 0;
+    public static final int PLACE_LIGHT = 1;
+    public static final int PLACE_TRIGGER = 2;
+    public static final int MODIFY_ENTITY = 3;
+    public static final int MODIFY_LIGHT = 4;
+    public static final int MODIFY_TRIGGER = 5;
+    public static final int MOVE = 6;
+    public static final int ERASE = 7;
+    public static final int SELECT = 8;
 
-    @Override
-    public void frame() {
-        msx = this.getMousePoint().x / 2 + (int)this.getGuiCamPos().getX();
-        msy = this.getMousePoint().y / 2 + (int)this.getGuiCamPos().getY();
-        
-        if(requestedMode > -1 && requestedMode != editingMode){
-            //object destruction
-            if(requestedMode != 0 && editingMode == 0){
-                activeScene.removeGUIItem(activeEntity);
-                activeEntity = null;
-            }
-            if(requestedMode != 4 && editingMode == 4){
-                activeScene.removeGUIItem(activeLight);
-                activeLight = null;
-            }
-            if(requestedMode != 5 && editingMode == 5){
-                activeScene.removeGUIItem(activeTrigger);
-                activeTrigger = null;
-            }
-            
-            //object creation
-            if(requestedMode == 0){
-                tools.setUIMode(0);
-                createEntity();
-            }
-            if(requestedMode == 4){
-                tools.setUIMode(1);
-                createLight();
-            }
-            if(requestedMode == 5){
-                tools.setUIMode(2);
-                createTrigger();
-            }
-            
-            editingMode = requestedMode;
-            requestedMode = -1;
-        }
-        if(genEntity){
-            if(activeEntity == null){
-                createEntity();
-            }
-            activeEntity.setSkin(activeSkin);
-            activeEntity.useSkin(activeFrame);
-            genEntity = false;
-        }
-        switch(editingMode){
-            case 0:{ //Tile add
-                if(activeEntity != null){
-                    activeEntity.setX(msx);
-                    activeEntity.setY(msy);
-                }
-                break;
-            }
-            case 1:{ //select
-                if(activeEntity != null){
-                    activeEntity.setSkin(activeSkin);
-                    activeEntity.useSkin(activeFrame);
-                }
-                break;
-            }
-            case 2:{ //move
-                
-                break;
-            }
-            case 3:{ //erase
-                
-                break;
-            }
-            case 4:{ //add Light
-                activeLight.setX(msx);
-                activeLight.setY(msy);
-                break;
-            }
-            case 5:{ //add Trigger
-                activeTrigger.setX(msx);
-                activeTrigger.setY(msy);
-                break;
-            }
-            case 6:{ //move op Tile
-                if(activeEntity != null){
-                    activeEntity.setX(msx);
-                    activeEntity.setY(msy);
-                }
-                break;
-            }
-            case 7:{ //move op light
-                if(activeLight != null){
-                    activeLight.setX(msx);
-                    activeLight.setY(msy);
-                }
-                break;
-            }
-            case 8:{ //move op trigger
-                if(activeTrigger != null){
-                    activeTrigger.setX(msx);
-                    activeTrigger.setY(msy);
-                }
-                break;
-            }
-        }
-        
-        float dirx, diry;
-        if(left){
-            dirx = mseSpeed;
-        } else if(right){
-            dirx = -mseSpeed;
-        } else {
-            dirx = 0;
-        }
-        if(up){
-            diry = mseSpeed;
-        } else if (down){
-            diry = -mseSpeed;
-        } else {
-            diry = 0;
-        }
-        this.setGuiCamDir(new Vector(dirx, diry));
-        
-        if(activeProject != null){
-            hgpu.setTitle(activeProject.getName() + " | " + msx + ", " + msy);
-        }else{
-            hgpu.setTitle(msx + ", " + msy);
-        }
+    private Project project;
+    private final ProjectManager projectManager;
+    private final CodeManager codeManager;
+    private final NewProject newProject;
+    private final ConfigurationManager configManager;
+    private int editorMode;
+    private final ArrayList<TileSheet> tiles;
+    private final ArrayList<Item> items;
+    int mouseX;
+    int mouseY;
+    int cameraX;
+    int cameraY;
+    int gridSnap;
+    float zoom;
+    boolean mouseInWindow;
+    boolean disallowModification;
+    
+    private Item activeItem;
+    private int activeTile;
+    
+    public static void main(String[] args){
+        new Editor().setVisible(true);
     }
 
-    @Override
-    public void init() {
-        hgpu.setGlobalScale(2);
-        nodeList = new ArrayList<>();
+    /**
+     * Creates new form Tools
+     *
+     */
+    public Editor() {
         tiles = new ArrayList<>();
-        
-        codeManager = new CodeManager();
+        items = new ArrayList<>();
         projectManager = new ProjectManager(this);
-        projectUI = new ProjectUI(this);
+        codeManager = new CodeManager();
         newProject = new NewProject(this);
+        configManager = new ConfigurationManager();
         
-        editingMode = 0;
-        requestedMode = -1;
-        
-        iconSkin = new Skin();
+        gridSnap = 1;
+        zoom = 1;
+        cameraX = 0;
+        cameraY = 0;
+        disallowModification = false;
+        configManager.loadConfig();
+
         try {
-            iconSkin.setBaseImage("icons/icons.png");
-            iconSkin.bufferSkinDef("icons/icons_def.png");
-        } catch (IOException ex) {
-            Logger.getLogger(Editor.class.getName()).log(Level.SEVERE, null, ex);
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Windows".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(Editor.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        
-        creationEntity = new Entity(iconSkin, "entity");
-        creationLight = new Light();
-        creationTrigger = new Trigger(0, 0, 1, 1);
-        
-        tools = new Tools(this);
-        tools.setVisible(true);
-        
-        this.setMode(TOP_DOWN);
-        
-        activeScene = new Scene();
-        this.setScene(activeScene);
-        
-        this.addListener(new GameMouseListener(){
-            
+
+        initComponents();
+        renderer.setEditor(this);
+
+        txtID.getDocument().addDocumentListener(new DocumentListener() {
+
             @Override
-            public void mousePressed(int button, Point position){
-                handleClick(button);
+            public void changedUpdate(DocumentEvent e) {
+                updateObjects();
             }
-            
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateObjects();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateObjects();
+            }
         });
-        this.addListener(new GameKeyListener(){
-            
+
+        txtCustomTag.getDocument().addDocumentListener(new DocumentListener() {
+
             @Override
-            public void keyPressed(String id){
-                handleKeyPress(id);
+            public void changedUpdate(DocumentEvent e) {
+                updateObjects();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateObjects();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateObjects();
+            }
+        });
+        
+        resetCore();
+        
+        Timer t = new javax.swing.Timer(1000/30, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                renderer.repaint();
+            }
+        });
+        t.start();
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jTabbedPane1 = new javax.swing.JTabbedPane();
+        jPanel2 = new javax.swing.JPanel();
+        spnCGroup = new javax.swing.JSpinner();
+        btnAddTrigger = new javax.swing.JButton();
+        chkInvertX = new javax.swing.JCheckBox();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        txtCode = new javax.swing.JTextArea();
+        chkInvertY = new javax.swing.JCheckBox();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel16 = new javax.swing.JLabel();
+        spnHeight = new javax.swing.JSpinner();
+        txtCustomTag = new javax.swing.JTextField();
+        jLabel8 = new javax.swing.JLabel();
+        spnWidth = new javax.swing.JSpinner();
+        chkAmbient = new javax.swing.JCheckBox();
+        jLabel10 = new javax.swing.JLabel();
+        jLabel11 = new javax.swing.JLabel();
+        btnMove = new javax.swing.JButton();
+        spnRed = new javax.swing.JSpinner();
+        btnErase = new javax.swing.JButton();
+        spnGreen = new javax.swing.JSpinner();
+        jSeparator3 = new javax.swing.JSeparator();
+        spnBlue = new javax.swing.JSpinner();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        txtID = new javax.swing.JTextField();
+        jLabel12 = new javax.swing.JLabel();
+        chkSolid = new javax.swing.JCheckBox();
+        jLabel13 = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
+        spnRadius = new javax.swing.JSpinner();
+        spnMass = new javax.swing.JSpinner();
+        jLabel14 = new javax.swing.JLabel();
+        chkVisible = new javax.swing.JCheckBox();
+        jLabel5 = new javax.swing.JLabel();
+        imgPreview = new javax.swing.JLabel();
+        cmbTilesheet = new javax.swing.JComboBox<>();
+        jLabel2 = new javax.swing.JLabel();
+        spnTile = new javax.swing.JSpinner();
+        jSeparator1 = new javax.swing.JSeparator();
+        btnAddTile = new javax.swing.JButton();
+        btnSelect = new javax.swing.JButton();
+        spnBrightness = new javax.swing.JSpinner();
+        jLabel15 = new javax.swing.JLabel();
+        spnOpacity = new javax.swing.JSpinner();
+        jSeparator4 = new javax.swing.JSeparator();
+        jLabel6 = new javax.swing.JLabel();
+        btnAddLight = new javax.swing.JButton();
+        jLabel18 = new javax.swing.JLabel();
+        spnLayer = new javax.swing.JSpinner();
+        jPanel3 = new javax.swing.JPanel();
+        btnExport = new javax.swing.JButton();
+        jSeparator2 = new javax.swing.JSeparator();
+        jLabel17 = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        txtHeader = new javax.swing.JTextArea();
+        jPanel1 = new javax.swing.JPanel();
+        jLabel3 = new javax.swing.JLabel();
+        spnGrid = new javax.swing.JSpinner();
+        jLabel19 = new javax.swing.JLabel();
+        spnZoom = new javax.swing.JSpinner();
+        btnResetCamera = new javax.swing.JButton();
+        renderer = new dingoengineleveleditor.Renderer();
+        jMenuBar1 = new javax.swing.JMenuBar();
+        jMenu1 = new javax.swing.JMenu();
+        btnNew = new javax.swing.JMenuItem();
+        btnOpen = new javax.swing.JMenuItem();
+        btnSave = new javax.swing.JMenuItem();
+        jMenu2 = new javax.swing.JMenu();
+        btnImport = new javax.swing.JMenuItem();
+        btnTileDelete = new javax.swing.JMenuItem();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
+        setTitle("DingoEngine Level Editor V2");
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                formWindowClosing(evt);
+            }
+        });
+
+        spnCGroup.setModel(new javax.swing.SpinnerNumberModel());
+        spnCGroup.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnCGroupStateChanged(evt);
+            }
+        });
+
+        btnAddTrigger.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/trigger.png"))); // NOI18N
+        btnAddTrigger.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddTriggerActionPerformed(evt);
+            }
+        });
+
+        chkInvertX.setText("Invert X?");
+        chkInvertX.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                chkInvertXStateChanged(evt);
+            }
+        });
+
+        txtCode.setEditable(false);
+        txtCode.setColumns(20);
+        txtCode.setRows(5);
+        jScrollPane1.setViewportView(txtCode);
+
+        chkInvertY.setText("Invert Y?");
+        chkInvertY.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                chkInvertYStateChanged(evt);
+            }
+        });
+
+        jLabel7.setText("Height:");
+
+        jLabel16.setText("Custom Tag:");
+
+        spnHeight.setModel(new javax.swing.SpinnerNumberModel(1.0f, 0.0f, null, 1.0f));
+        spnHeight.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnHeightStateChanged(evt);
+            }
+        });
+
+        jLabel8.setText("Width:");
+
+        spnWidth.setModel(new javax.swing.SpinnerNumberModel(1.0f, 0.0f, null, 1.0f));
+        spnWidth.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnWidthStateChanged(evt);
+            }
+        });
+
+        chkAmbient.setSelected(true);
+        chkAmbient.setText("Ambient?");
+        chkAmbient.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                chkAmbientStateChanged(evt);
+            }
+        });
+
+        jLabel10.setText("Color:");
+
+        jLabel11.setText("R");
+
+        btnMove.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/move.png"))); // NOI18N
+        btnMove.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnMoveActionPerformed(evt);
+            }
+        });
+
+        spnRed.setModel(new javax.swing.SpinnerNumberModel(255, 0, 255, 1));
+        spnRed.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnRedStateChanged(evt);
+            }
+        });
+
+        btnErase.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/erase.png"))); // NOI18N
+        btnErase.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnEraseActionPerformed(evt);
+            }
+        });
+
+        spnGreen.setModel(new javax.swing.SpinnerNumberModel(255, 0, 255, 1));
+        spnGreen.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnGreenStateChanged(evt);
+            }
+        });
+
+        spnBlue.setModel(new javax.swing.SpinnerNumberModel(255, 0, 255, 1));
+        spnBlue.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnBlueStateChanged(evt);
+            }
+        });
+
+        jLabel1.setText("ID:");
+
+        jLabel9.setText("G");
+
+        jLabel12.setText("B");
+
+        chkSolid.setText("Solid?");
+        chkSolid.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                chkSolidStateChanged(evt);
+            }
+        });
+
+        jLabel13.setText("Radius:");
+
+        jLabel4.setText("Mass:");
+
+        spnRadius.setModel(new javax.swing.SpinnerNumberModel(16.0f, null, null, 1.0f));
+        spnRadius.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnRadiusStateChanged(evt);
+            }
+        });
+
+        spnMass.setModel(new javax.swing.SpinnerNumberModel(0.0f, null, null, 1.0f));
+        spnMass.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnMassStateChanged(evt);
+            }
+        });
+
+        jLabel14.setText("Brightness:");
+
+        chkVisible.setSelected(true);
+        chkVisible.setText("Visible?");
+        chkVisible.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                chkVisibleStateChanged(evt);
+            }
+        });
+
+        jLabel5.setText("Opacity:");
+
+        imgPreview.setBackground(new java.awt.Color(0, 0, 0));
+
+        cmbTilesheet.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                cmbTilesheetItemStateChanged(evt);
+            }
+        });
+
+        jLabel2.setText("Frame:");
+
+        spnTile.setModel(new javax.swing.SpinnerNumberModel(0, 0, null, 1));
+        spnTile.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnTileStateChanged(evt);
+            }
+        });
+
+        btnAddTile.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/tileadd.png"))); // NOI18N
+        btnAddTile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddTileActionPerformed(evt);
+            }
+        });
+
+        btnSelect.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/select.png"))); // NOI18N
+        btnSelect.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSelectActionPerformed(evt);
+            }
+        });
+
+        spnBrightness.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(1.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.1f)));
+        spnBrightness.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnBrightnessStateChanged(evt);
+            }
+        });
+
+        jLabel15.setText("Generated code:");
+        jLabel15.setToolTipText("The code that is generated for this group of objects. Only touch if you know what you are doing!");
+
+        spnOpacity.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(1.0f), Float.valueOf(0.0f), Float.valueOf(1.0f), Float.valueOf(0.1f)));
+        spnOpacity.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnOpacityStateChanged(evt);
+            }
+        });
+
+        jLabel6.setText("Collision Group:");
+
+        btnAddLight.setIcon(new javax.swing.ImageIcon(getClass().getResource("/resources/light.png"))); // NOI18N
+        btnAddLight.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddLightActionPerformed(evt);
+            }
+        });
+
+        jLabel18.setText("Layer:");
+
+        spnLayer.setModel(new javax.swing.SpinnerNumberModel(0, 0, null, 1));
+        spnLayer.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnLayerStateChanged(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING)
+            .addComponent(jSeparator3)
+            .addComponent(jSeparator4, javax.swing.GroupLayout.Alignment.TRAILING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(imgPreview, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(cmbTilesheet, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addContainerGap())
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(jLabel2)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(spnTile)
+                                .addGap(74, 74, 74))))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(jLabel1)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(txtID))
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(btnAddTile)
+                                    .addComponent(btnSelect))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(jPanel2Layout.createSequentialGroup()
+                                        .addComponent(btnMove)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(btnErase))
+                                    .addGroup(jPanel2Layout.createSequentialGroup()
+                                        .addComponent(btnAddLight)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(btnAddTrigger)))
+                                .addGap(0, 4, Short.MAX_VALUE))
+                            .addComponent(jScrollPane1))
+                        .addContainerGap())
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(jLabel16)
+                        .addGap(19, 19, 19))
+                    .addComponent(txtCustomTag)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(chkVisible)
+                                .addGap(18, 18, 18)
+                                .addComponent(jLabel5)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spnOpacity, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel6)
+                                    .addComponent(chkInvertX))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(chkInvertY)
+                                    .addComponent(spnCGroup, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(jLabel7)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spnHeight, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jLabel8)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spnWidth, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(chkSolid)
+                                .addGap(24, 24, 24)
+                                .addComponent(jLabel4)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spnMass, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jLabel18)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spnLayer, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
+                                        .addComponent(jLabel13)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(spnRadius, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(jLabel14)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(spnBrightness, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
+                                        .addComponent(chkAmbient)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jLabel10)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jLabel11)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(spnRed, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel9)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(spnGreen, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel12)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spnBlue, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel15))
+                        .addGap(0, 0, Short.MAX_VALUE))))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(cmbTilesheet, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel2)
+                            .addComponent(spnTile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addComponent(imgPreview, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 21, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnAddTile)
+                    .addComponent(btnAddLight)
+                    .addComponent(btnAddTrigger))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnMove)
+                    .addComponent(btnErase)
+                    .addComponent(btnSelect))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jSeparator3, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(chkSolid)
+                    .addComponent(jLabel4)
+                    .addComponent(spnMass, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel18)
+                    .addComponent(spnLayer, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(chkVisible)
+                    .addComponent(jLabel5)
+                    .addComponent(spnOpacity, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel6)
+                    .addComponent(spnCGroup, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(chkInvertX)
+                    .addComponent(chkInvertY))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel7)
+                    .addComponent(spnHeight, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel8)
+                    .addComponent(spnWidth, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(chkAmbient)
+                    .addComponent(jLabel10)
+                    .addComponent(jLabel11)
+                    .addComponent(spnRed, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel9)
+                    .addComponent(spnGreen, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel12)
+                    .addComponent(spnBlue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel13)
+                    .addComponent(spnRadius, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel14)
+                    .addComponent(spnBrightness, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(jSeparator4, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel15)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel16)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(txtCustomTag, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(48, 48, 48))
+        );
+
+        jTabbedPane1.addTab("Edit", jPanel2);
+
+        btnExport.setText("Export");
+        btnExport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnExportActionPerformed(evt);
+            }
+        });
+
+        jLabel17.setText("Header:");
+
+        txtHeader.setColumns(20);
+        txtHeader.setRows(5);
+        jScrollPane2.setViewportView(txtHeader);
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jSeparator2)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 273, Short.MAX_VALUE)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(btnExport)
+                            .addComponent(jLabel17))
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(btnExport)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel17)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(609, Short.MAX_VALUE))
+        );
+
+        jTabbedPane1.addTab("Project", jPanel3);
+
+        jLabel3.setText("Grid Snap:");
+
+        spnGrid.setModel(new javax.swing.SpinnerNumberModel(1, 1, 64, 1));
+        spnGrid.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnGridStateChanged(evt);
+            }
+        });
+
+        jLabel19.setText("Zoom:");
+
+        spnZoom.setModel(new javax.swing.SpinnerNumberModel(1.0f, 0.1f, null, 0.5f));
+        spnZoom.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                spnZoomStateChanged(evt);
+            }
+        });
+
+        btnResetCamera.setText("Reset Camera");
+        btnResetCamera.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnResetCameraActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel3)
+                            .addComponent(jLabel19))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(spnGrid, javax.swing.GroupLayout.DEFAULT_SIZE, 50, Short.MAX_VALUE)
+                            .addComponent(spnZoom)))
+                    .addComponent(btnResetCamera))
+                .addContainerGap(179, Short.MAX_VALUE))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3)
+                    .addComponent(spnGrid, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel19)
+                    .addComponent(spnZoom, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(btnResetCamera)
+                .addContainerGap(671, Short.MAX_VALUE))
+        );
+
+        jTabbedPane1.addTab("Settings", jPanel1);
+
+        renderer.setBackground(new java.awt.Color(0, 0, 0));
+        renderer.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            public void mouseMoved(java.awt.event.MouseEvent evt) {
+                rendererMouseMoved(evt);
+            }
+        });
+        renderer.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                rendererMouseEntered(evt);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                rendererMouseExited(evt);
+            }
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                rendererMousePressed(evt);
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                rendererMouseReleased(evt);
+            }
+        });
+
+        javax.swing.GroupLayout rendererLayout = new javax.swing.GroupLayout(renderer);
+        renderer.setLayout(rendererLayout);
+        rendererLayout.setHorizontalGroup(
+            rendererLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 810, Short.MAX_VALUE)
+        );
+        rendererLayout.setVerticalGroup(
+            rendererLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+
+        jMenu1.setText("File");
+
+        btnNew.setText("New");
+        btnNew.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnNewActionPerformed(evt);
+            }
+        });
+        jMenu1.add(btnNew);
+
+        btnOpen.setText("Open");
+        btnOpen.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnOpenActionPerformed(evt);
+            }
+        });
+        jMenu1.add(btnOpen);
+
+        btnSave.setText("Save");
+        btnSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSaveActionPerformed(evt);
+            }
+        });
+        jMenu1.add(btnSave);
+
+        jMenuBar1.add(jMenu1);
+
+        jMenu2.setText("Tile");
+
+        btnImport.setText("Import");
+        btnImport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnImportActionPerformed(evt);
+            }
+        });
+        jMenu2.add(btnImport);
+
+        btnTileDelete.setText("Delete");
+        btnTileDelete.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnTileDeleteActionPerformed(evt);
+            }
+        });
+        jMenu2.add(btnTileDelete);
+
+        jMenuBar1.add(jMenu2);
+
+        setJMenuBar(jMenuBar1);
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 298, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(renderer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jTabbedPane1)
+            .addComponent(renderer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void btnImportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnImportActionPerformed
+        // TODO add your handling code here:
+        JFileChooser jfcInput = new JFileChooser(project.getPath());
+        jfcInput.setFileFilter(new FileFilter() {
+
+            @Override
+            public String getDescription() {
+                return "PNG Images (.png)";
+            }
+
+            @Override
+            public boolean accept(File f) {
+                if (f.isDirectory()) {
+                    return true;
+                } else {
+                    String filename = f.getName().toLowerCase();
+                    return filename.endsWith(".png");
+                }
+            }
+
+        });
+        int fstatus = jfcInput.showOpenDialog(this);
+        if (fstatus == JFileChooser.APPROVE_OPTION) {
+            String sourceFile = jfcInput.getSelectedFile().getPath();
+            //copy tilesheet data to project folder
+            String source = sourceFile;
+            String dest = project.getPath() + jfcInput.getSelectedFile().getName();
+            System.out.println("Copying " + source + " to " + dest);
+            try {
+                if(!source.equals(dest)){
+                    FileUtils.copyFile(new File(source), new File(dest));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
             
-            @Override
-            public void keyReleased(String id){
-                handleKeyRelease(id);
+            source = sourceFile.substring(0, sourceFile.length() - 4) + "_def.png";
+            dest = dest.substring(0, dest.length() - 4) + "_def.png";
+            System.out.println("Copying " + source + " to " + dest);
+            try {
+                if(!source.equals(dest)){
+                    FileUtils.copyFile(new File(source), new File(dest));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+            
+            
+            //import tilesheet
+            TileSheet tile = importTile(sourceFile, jfcInput.getSelectedFile().getName());
+            if (tile == null) {
+                System.out.println("Tile generation failed");
+                return;
+            }
+            System.out.println("Tile created");
+        }
+    }//GEN-LAST:event_btnImportActionPerformed
+
+    private void btnTileDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTileDeleteActionPerformed
+        // TODO add your handling code here:
+        cmbTilesheet.removeAllItems();
+        tiles.remove(activeTile);
+        for (TileSheet tile : tiles) {
+            cmbTilesheet.addItem(tile.getName());
+        }
+
+        imgPreview.setIcon(null);
+
+        selectSprite();
+    }//GEN-LAST:event_btnTileDeleteActionPerformed
+
+    private void btnAddLightActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddLightActionPerformed
+        // TODO add your handling code here:
+        btnSelect.setSelected(false);
+        btnAddLight.setSelected(true);
+        btnAddTile.setSelected(false);
+        btnAddTrigger.setSelected(false);
+        btnErase.setSelected(false);
+        btnMove.setSelected(false);
+        
+        activeItem = createNewLight();
+        txtID.setText("lgtDefault");
+        setEditorMode(PLACE_LIGHT);
+        updateObjects();
+    }//GEN-LAST:event_btnAddLightActionPerformed
+
+    private void spnOpacityStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnOpacityStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnOpacityStateChanged
+
+    private void spnBrightnessStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnBrightnessStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnBrightnessStateChanged
+
+    private void btnSelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSelectActionPerformed
+        // TODO add your handling code here:
+        btnSelect.setSelected(true);
+        btnAddLight.setSelected(false);
+        btnAddTile.setSelected(false);
+        btnAddTrigger.setSelected(false);
+        btnErase.setSelected(false);
+        btnMove.setSelected(false);
+        
+        activeItem = null;
+        setEditorMode(SELECT);
+    }//GEN-LAST:event_btnSelectActionPerformed
+
+    private void btnAddTileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddTileActionPerformed
+        // TODO add your handling code here:
+        btnSelect.setSelected(false);
+        btnAddLight.setSelected(false);
+        btnAddTile.setSelected(true);
+        btnAddTrigger.setSelected(false);
+        btnErase.setSelected(false);
+        btnMove.setSelected(false);
+        
+        activeItem = createNewEntity();
+        if(activeItem != null){
+            txtID.setText("entDefault" + activeItem.getTile().getName() + (Integer) spnTile.getModel().getValue());
+        }
+        setEditorMode(PLACE_ENTITY);
+        updateObjects();
+    }//GEN-LAST:event_btnAddTileActionPerformed
+
+    private void spnTileStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnTileStateChanged
+        // TODO add your handling code here:
+        selectSprite();
+    }//GEN-LAST:event_spnTileStateChanged
+
+    private void cmbTilesheetItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cmbTilesheetItemStateChanged
+        // TODO add your handling code here:
+        spnTile.getModel().setValue(0);
+        selectSprite();
+        if(tiles.isEmpty()){
+            return;
+        }
+        SpinnerNumberModel model = new SpinnerNumberModel(0, 0, tiles.get(activeTile).getFrameCount() - 1, 1);
+        spnTile.setModel(model);
+    }//GEN-LAST:event_cmbTilesheetItemStateChanged
+
+    private void chkVisibleStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_chkVisibleStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_chkVisibleStateChanged
+
+    private void spnMassStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnMassStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnMassStateChanged
+
+    private void spnRadiusStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnRadiusStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnRadiusStateChanged
+
+    private void chkSolidStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_chkSolidStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_chkSolidStateChanged
+
+    private void spnBlueStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnBlueStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnBlueStateChanged
+
+    private void spnGreenStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnGreenStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnGreenStateChanged
+
+    private void btnEraseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEraseActionPerformed
+        // TODO add your handling code here:
+        btnSelect.setSelected(false);
+        btnAddLight.setSelected(false);
+        btnAddTile.setSelected(false);
+        btnAddTrigger.setSelected(false);
+        btnErase.setSelected(true);
+        btnMove.setSelected(false);
+        
+        activeItem = null;
+        setEditorMode(ERASE);
+    }//GEN-LAST:event_btnEraseActionPerformed
+
+    private void spnRedStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnRedStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnRedStateChanged
+
+    private void btnMoveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnMoveActionPerformed
+        // TODO add your handling code here:
+        btnSelect.setSelected(false);
+        btnAddLight.setSelected(false);
+        btnAddTile.setSelected(false);
+        btnAddTrigger.setSelected(false);
+        btnErase.setSelected(false);
+        btnMove.setSelected(true);
+        
+        activeItem = null;
+        setEditorMode(MOVE);
+    }//GEN-LAST:event_btnMoveActionPerformed
+
+    private void chkAmbientStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_chkAmbientStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_chkAmbientStateChanged
+
+    private void spnWidthStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnWidthStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnWidthStateChanged
+
+    private void spnHeightStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnHeightStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnHeightStateChanged
+
+    private void chkInvertYStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_chkInvertYStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_chkInvertYStateChanged
+
+    private void chkInvertXStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_chkInvertXStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_chkInvertXStateChanged
+
+    private void btnAddTriggerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddTriggerActionPerformed
+        // TODO add your handling code here:
+        btnSelect.setSelected(false);
+        btnAddLight.setSelected(false);
+        btnAddTile.setSelected(false);
+        btnAddTrigger.setSelected(true);
+        btnErase.setSelected(false);
+        btnMove.setSelected(false);
+        
+        activeItem = createNewTrigger();
+        txtID.setText("trgDefault");
+        setEditorMode(PLACE_TRIGGER);
+        updateObjects();
+    }//GEN-LAST:event_btnAddTriggerActionPerformed
+
+    private void spnCGroupStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnCGroupStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnCGroupStateChanged
+
+    private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
+        // TODO add your handling code here:
+        saveProject();
+    }//GEN-LAST:event_btnSaveActionPerformed
+
+    private void btnOpenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOpenActionPerformed
+        // TODO add your handling code here:
+        JFileChooser jfcInput = new JFileChooser();
+        jfcInput.setFileFilter(new FileFilter() {
+
+            @Override
+            public String getDescription() {
+                return "DE4 Map File (.d4m)";
+            }
+
+            @Override
+            public boolean accept(File f) {
+                if (f.isDirectory()) {
+                    return true;
+                } else {
+                    String filename = f.getName().toLowerCase();
+                    return filename.endsWith(".d4m");
+                }
+            }
+
+        });
+        if(!configManager.getLastOpenedLocation().equals("default")){
+            jfcInput.setCurrentDirectory(new File(configManager.getLastOpenedLocation()));
+        }
+        int fstatus = jfcInput.showOpenDialog(this);
+        if (fstatus == JFileChooser.APPROVE_OPTION) {
+            resetCore();
+            project = new Project();
+            projectManager.loadProject(project, jfcInput.getSelectedFile().getPath());
+            configManager.setLastOpenedLocation(project.getPath());
+            txtHeader.setText(project.getHeader());
+        }
+    }//GEN-LAST:event_btnOpenActionPerformed
+
+    private void btnNewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewActionPerformed
+        // TODO add your handling code here:
+        newProject.setVisible(true);
+    }//GEN-LAST:event_btnNewActionPerformed
+
+    private void spnLayerStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnLayerStateChanged
+        // TODO add your handling code here:
+        updateObjects();
+    }//GEN-LAST:event_spnLayerStateChanged
+
+    private void rendererMouseMoved(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseMoved
+        // TODO add your handling code here:
+        if(editorMode == MOVE || editorMode == PLACE_ENTITY || editorMode == PLACE_LIGHT || editorMode == PLACE_TRIGGER){
+            mouseX = evt.getX() - (renderer.getWidth() / 2);
+            mouseY = evt.getY() - (renderer.getHeight() / 2);
+
+            //adjust coordninates for zoom
+            mouseX = (int)(mouseX / zoom);
+            mouseY = (int)(mouseY / zoom);
+
+            if(activeItem != null){
+                //translate to world space and snap to grid
+                int placeX = mouseX + cameraX;
+                int placeY = mouseY + cameraY;
                 
-        });
-        this.addKey(Keyboard.KEY_LEFT, "left");
-        this.addKey(Keyboard.KEY_RIGHT, "right");
-        this.addKey(Keyboard.KEY_UP, "up");
-        this.addKey(Keyboard.KEY_DOWN, "down");
-        
-        this.setRunning(true);
-    }
-    
-    private void createEntity(){
-        if (activeSkin != null) {
-            Entity dataEntity = new Entity(iconSkin, "entity");
-            dataEntity.setSolid(creationEntity.isSolid());
-            dataEntity.setMass(creationEntity.getMass());
-            dataEntity.setVisible(creationEntity.isVisible());
-            dataEntity.setOpacity(creationEntity.getOpacity());
-            dataEntity.setCollisionLayer(creationEntity.getCollisionLayer());
-            
-            activeEntity = new Entity(activeSkin, "entDefault" + activeSkin.getID() + activeFrame);
-            activeEntity.useSkin(activeFrame);
-            activeEntity.setInvertX(creationEntity.isInvertX());
-            activeEntity.setInvertY(creationEntity.isInvertY());
-            activeEntity.setUserData(dataEntity);
-            activeScene.attachGUIChild(activeEntity);
-            
-            codeManager.genTag(activeEntity);
-            
-            tools.updateUI(activeEntity, null, null, codeManager, activeEntity);
+                placeX = placeX / gridSnap;
+                placeX = placeX * gridSnap;
+                placeY = placeY / gridSnap;
+                placeY = placeY * gridSnap;
+
+                activeItem.setX(placeX);
+                activeItem.setY(placeY);
+            }
+        }else{
+            mouseX = evt.getX() - (renderer.getWidth() / 2);
+            mouseY = evt.getY() - (renderer.getHeight() / 2);
+
+            //adjust coordninates for zoom
+            mouseX = (int)(mouseX / zoom);
+            mouseY = (int)(mouseY / zoom);
         }
-    }
-    
-    private void createLight(){
-        Light dataLight = new Light();
-        dataLight.setAmbient(creationLight.isAmbient());
-        dataLight.setRed(creationLight.getRed());
-        dataLight.setGreen(creationLight.getGreen());
-        dataLight.setBlue(creationLight.getBlue());
-        dataLight.setRadius(creationLight.getRadius());
-        dataLight.setBrightness(creationLight.getBrightness());
-        dataLight.setId("light_default");
+    }//GEN-LAST:event_rendererMouseMoved
+
+    private void rendererMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMousePressed
+        // TODO add your handling code here:
+        disallowModification = true;
         
-        activeLight = new Entity(iconSkin, "Light");
-        activeLight.setUserData(dataLight);
-        activeScene.attachGUIChild(activeLight);
+        int msX = evt.getX() - (renderer.getWidth() / 2);
+        int msY = evt.getY() - (renderer.getHeight() / 2);
         
-        codeManager.genTag(activeLight);
+        //adjust coordninates for zoom
+        msX = (int)(msX / zoom);
+        msY = (int)(msY / zoom);
         
-        tools.updateUI(null, dataLight, null, codeManager, activeLight);
-    }
-    
-    private void createTrigger(){
-        Trigger dataTrigger = new Trigger(0, 0, creationTrigger.getWidth(), creationTrigger.getHeight());
-        dataTrigger.setID("trigger_default");
-        
-        activeTrigger = new Entity(iconSkin, "Trigger");
-        activeTrigger.useSkin(1);
-        activeTrigger.setUserData(dataTrigger);
-        activeScene.attachGUIChild(activeTrigger);
-        
-        codeManager.genTag(activeTrigger);
-        
-        tools.updateUI(null, null, dataTrigger, codeManager, activeTrigger);
-    }
-    
-    private Object selectNode(){
-        List<Node> clickedNodes = Utils.rayTest(nodeList, new Point(msx, msy));
-        if(clickedNodes.isEmpty()){
-            return null;
-        }
-        Object node = clickedNodes.get(clickedNodes.size() - 1);
-        System.out.println(node);
-        return node;
-    }
-    
-    public void handleKeyPress(String id){
-        switch(id){
-            case "left":{
-                left = true;
-                break;
-            }
-            case "right":{
-                right = true;
-                break;
-            }
-            case "up":{
-                up = true;
-                break;
-            }
-            case "down":{
-                down = true;
-                break;
-            }
-        }
-    }
-    
-    public void handleKeyRelease(String id){
-        switch(id){
-            case "left":{
-                left = false;
-                break;
-            }
-            case "right":{
-                right = false;
-                break;
-            }
-            case "up":{
-                up = false;
-                break;
-            }
-            case "down":{
-                down = false;
-                break;
-            }
-        }
-    }
-    
-    public void handleClick(int button){
-        switch(editingMode){
-            case 0:{
-                nodeList.add(activeEntity);
-                createEntity();
-                break;
-            }
-            case 1:{
-                Object node = selectNode();
-                if(node == null){
-                    break;
+        switch(editorMode){
+            case PLACE_ENTITY:{
+                if(activeItem == null){
+                    return;
                 }
-                if(node instanceof Entity){
-                    if(((Entity)node).getUserData() instanceof Light){
-                        System.out.println("Light selected");
-                        activeLight = (Entity)node;
-                        System.out.println(activeLight.getID());
-                        tools.setUIMode(1);
-                        tools.updateUI(null, (Light)activeLight.getUserData(), null, codeManager, activeLight);
-                    }else if(((Entity)node).getUserData() instanceof Trigger){
-                        System.out.println("Trigger selected");
-                        activeTrigger = (Entity)node;
-                        System.out.println(activeTrigger.getID());
-                        tools.setUIMode(2);
-                        tools.updateUI(null, null, (Trigger)activeTrigger.getUserData(), codeManager, activeTrigger);
-                    } else {
-                        System.out.println("Entity selected");
-                        activeEntity = (Entity)node;
-                        System.out.println(activeEntity.getID());
-                        tools.setUIMode(0);
-                        tools.updateUI(activeEntity, null, null, codeManager, activeEntity);
+                items.add(activeItem);
+                activeItem = createNewEntity();
+                activeItem.setX(mouseX + cameraX);
+                activeItem.setY(mouseY + cameraY);
+                break;
+            }
+            case PLACE_LIGHT:{
+                if(activeItem == null){
+                    return;
+                }
+                items.add(activeItem);
+                activeItem = createNewLight();
+                activeItem.setX(mouseX + cameraX);
+                activeItem.setY(mouseY + cameraY);
+                break;
+            }
+            case PLACE_TRIGGER:{
+                if(activeItem == null){
+                    return;
+                }
+                items.add(activeItem);
+                activeItem = createNewTrigger();
+                activeItem.setX(mouseX + cameraX);
+                activeItem.setY(mouseY + cameraY);
+                break;
+            }
+            case MOVE:{
+                if(activeItem == null){
+                    for(Item item : items){
+                        if(intersect(msX, msY, item)){
+                            activeItem = item;
+                            break;
+                        }
+                    }
+                }else{
+                    activeItem = null;
+                }
+                break;
+            }
+            case ERASE:{
+                for(Item item : items){
+                    if(intersect(msX, msY, item)){
+                        activeItem = item;
+                        break;
                     }
                 }
+                if(activeItem == null){
+                    return;
+                }
+                items.remove(activeItem);
+                activeItem = null;
                 break;
             }
-            case 2:{
-                Object node = selectNode();
-                if(node == null){
-                    break;
-                }
-                if(node instanceof Entity){
-                    if(((Entity)node).getUserData() instanceof Light){
-                        System.out.println("Light selected");
-                        activeLight = (Entity)node;
-                        System.out.println(activeLight.getID());
-                        setEditingMode(7);
-                    }else if(((Entity)node).getUserData() instanceof Trigger){
-                        System.out.println("Trigger selected");
-                        activeTrigger = (Entity)node;
-                        System.out.println(activeTrigger.getID());
-                        setEditingMode(8);
-                    }else{
-                        System.out.println("Entity selected");
-                        activeEntity = (Entity)node;
-                        System.out.println(activeEntity.getID());
-                        setEditingMode(6);
+            case MODIFY_ENTITY:{}
+            case MODIFY_TRIGGER:{}
+            case MODIFY_LIGHT:{}
+            case SELECT:{
+                for(Item item : items){
+                    if(intersect(msX, msY, item)){
+                        activeItem = item;
+                        break;
                     }
                 }
+                if(activeItem == null){
+                    return;
+                }
+                switch(activeItem.getType()){
+                    case Item.ITEM_ENTITY:{
+                        setEditorMode(MODIFY_ENTITY);
+                        break;
+                    }
+                    case Item.ITEM_LIGHT:{
+                        setEditorMode(MODIFY_LIGHT);
+                        break;
+                    }
+                    case Item.ITEM_TRIGGER:{
+                        setEditorMode(MODIFY_TRIGGER);
+                        break;
+                    }
+                }
+                updateUI();
                 break;
             }
-            case 3 :{
-                Node node = (Node)selectNode();
-                activeScene.removeGUIItem(node);
-                nodeList.remove(node);
-                codeManager.removeTag(node);
+        }
+    }//GEN-LAST:event_rendererMousePressed
+
+    private void btnExportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportActionPerformed
+        // TODO add your handling code here:
+        projectManager.saveProject(items, tiles, project);
+        codeManager.compile(items, project.getPath() + project.getName() + ".map", project.getHeader());
+    }//GEN-LAST:event_btnExportActionPerformed
+
+    private void spnGridStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnGridStateChanged
+        // TODO add your handling code here:
+        gridSnap = (Integer) spnGrid.getModel().getValue();
+    }//GEN-LAST:event_spnGridStateChanged
+
+    private void rendererMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseReleased
+        // TODO add your handling code here:
+        disallowModification = false;
+    }//GEN-LAST:event_rendererMouseReleased
+
+    private void spnZoomStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnZoomStateChanged
+        // TODO add your handling code here:
+        zoom = (Float)spnZoom.getModel().getValue();
+    }//GEN-LAST:event_spnZoomStateChanged
+
+    private void rendererMouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseEntered
+        // TODO add your handling code here:
+        mouseInWindow = true;
+    }//GEN-LAST:event_rendererMouseEntered
+
+    private void rendererMouseExited(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseExited
+        // TODO add your handling code here:
+        mouseInWindow = false;
+    }//GEN-LAST:event_rendererMouseExited
+
+    private void btnResetCameraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnResetCameraActionPerformed
+        // TODO add your handling code here:
+        cameraX = 0;
+        cameraY = 0;
+    }//GEN-LAST:event_btnResetCameraActionPerformed
+
+    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+        // TODO add your handling code here:
+        configManager.saveConfig();
+        System.exit(0);
+    }//GEN-LAST:event_formWindowClosing
+
+    public void selectSprite() {
+        String targetTile = cmbTilesheet.getItemAt(cmbTilesheet.getSelectedIndex());
+        int index = 0;
+        for (TileSheet tile : tiles) {
+            if (tile.getName() == null ? targetTile == null : tile.getName().equals(targetTile)) {
+                activeTile = index;
+                imgPreview.setIcon(new ImageIcon(tile.getFrame((Integer) spnTile.getModel().getValue()).getScaledInstance(100, 100, Image.SCALE_REPLICATE)));
+                //create active item if item is null
+                if(activeItem == null){
+                    activeItem = createNewEntity();
+                }
+                activeItem.setTile(tile);
+                if (editorMode == PLACE_ENTITY) {
+                    txtID.setText("entDefault" + targetTile + (Integer) spnTile.getModel().getValue());
+                }
+            }
+            index++;
+        }
+        updateObjects();
+    }
+
+    public void updateObjects() {
+        //do nothing if active item hasnt been initialized
+        if(activeItem == null || disallowModification){
+            return;
+        }
+        System.out.println("update");
+        
+        switch(editorMode){
+            case PLACE_ENTITY:{
+                activeItem = createNewEntity();
                 break;
             }
-            case 4:{
-                nodeList.add(activeLight);
-                createLight();
+            case PLACE_LIGHT:{
+                activeItem = createNewLight();
                 break;
             }
-            case 5:{
-                nodeList.add(activeTrigger);
-                createTrigger();
+            case PLACE_TRIGGER:{
+                activeItem = createNewTrigger();
                 break;
             }
-            case 6:{
-                activeEntity = null;
-                setEditingMode(2);
+            case MODIFY_ENTITY:{
+                activeItem.setType(Item.ITEM_ENTITY);
+                activeItem.setID(txtID.getText());
+                activeItem.setTile(tiles.get(activeTile));
+                activeItem.setFrame((Integer) spnTile.getModel().getValue());
+                activeItem.setSolid(chkSolid.isSelected());
+                activeItem.setMass((Float) spnMass.getModel().getValue());
+                activeItem.setVisible(chkVisible.isSelected());
+                activeItem.setOpacity((Float) spnOpacity.getModel().getValue());
+                activeItem.setCollisionLayer((Integer) spnCGroup.getModel().getValue());
+                activeItem.setLayer((Integer) spnLayer.getModel().getValue());
+                activeItem.setInvertX(chkInvertX.isSelected());
+                activeItem.setInvertY(chkInvertY.isSelected());
+                codeManager.genTag(activeItem, txtCustomTag.getText());
                 break;
             }
-            case 7:{
-                activeLight = null;
-                setEditingMode(2);
+            case MODIFY_LIGHT:{
+                activeItem.setType(Item.ITEM_LIGHT);
+                activeItem.setID(txtID.getText());
+                activeItem.setAmbient(chkAmbient.isSelected());
+                activeItem.setRed((Integer) spnRed.getModel().getValue());
+                activeItem.setGreen((Integer) spnGreen.getModel().getValue());
+                activeItem.setBlue((Integer) spnBlue.getModel().getValue());
+                activeItem.setRadius((Float) spnRadius.getModel().getValue());
+                activeItem.setBrightness((Float) spnBrightness.getModel().getValue());
+                codeManager.genTag(activeItem, txtCustomTag.getText());
                 break;
             }
-            case 8:{
-                activeTrigger = null;
-                setEditingMode(2);
+            case MODIFY_TRIGGER:{
+                activeItem.setType(Item.ITEM_TRIGGER);
+                activeItem.setID(txtID.getText());
+                activeItem.setHeight((Integer) spnHeight.getModel().getValue());
+                activeItem.setWidth((Integer) spnWidth.getModel().getValue());
+                codeManager.genTag(activeItem, txtCustomTag.getText());
+                break;
+            }
+        }
+
+        //code update
+        txtCode.setText(codeManager.genTag(activeItem, txtCustomTag.getText()));
+    }
+
+    public void updateUI() {
+
+        txtCode.setText(activeItem.getCodeTag().getTag());
+        txtCustomTag.setText(activeItem.getCodeTag().getCustomTag());
+
+        switch (activeItem.getType()) {
+            case Item.ITEM_ENTITY: {
+                //entity update
+                txtID.setText(activeItem.getID());
+                chkSolid.setSelected(activeItem.isSolid());
+                spnMass.getModel().setValue(activeItem.getMass());
+                chkVisible.setSelected(activeItem.isVisible());
+                spnOpacity.getModel().setValue(activeItem.getOpacity());
+                spnCGroup.getModel().setValue(activeItem.getCollisionLayer());
+                chkInvertX.setSelected(activeItem.isInvertX());
+                chkInvertY.setSelected(activeItem.isInvertY());
+                spnTile.getModel().setValue(activeItem.getFrame());
+                spnLayer.getModel().setValue(activeItem.getLayer());
+                break;
+            }
+            case Item.ITEM_LIGHT: {
+                //light update
+                txtID.setText(activeItem.getID());
+                chkAmbient.setSelected(activeItem.isAmbient());
+                spnRed.getModel().setValue(activeItem.getRed());
+                spnGreen.getModel().setValue(activeItem.getGreen());
+                spnBlue.getModel().setValue(activeItem.getBlue());
+                spnRadius.getModel().setValue(activeItem.getRadius());
+                spnBrightness.getModel().setValue(activeItem.getBrightness());
+                break;
+            }
+            case Item.ITEM_TRIGGER: {
+                //trigger update
+                txtID.setText(activeItem.getID());
+                spnHeight.getModel().setValue(activeItem.getHeight());
+                spnWidth.getModel().setValue(activeItem.getWidth());
+                break;
+            }
+        }
+    }
+
+    public int getEditorMode() {
+        return editorMode;
+    }
+
+    public void setEditorMode(int mode) {
+        editorMode = mode;
+        
+        chkSolid.setEnabled(false);
+        spnMass.setEnabled(false);
+        chkVisible.setEnabled(false);
+        spnOpacity.setEnabled(false);
+        spnCGroup.setEnabled(false);
+        chkInvertX.setEnabled(false);
+        chkInvertY.setEnabled(false);
+        spnHeight.setEnabled(false);
+        spnWidth.setEnabled(false);
+        chkAmbient.setEnabled(false);
+        spnRed.setEnabled(false);
+        spnGreen.setEnabled(false);
+        spnBlue.setEnabled(false);
+        spnRadius.setEnabled(false);
+        spnBrightness.setEnabled(false);
+
+        switch (editorMode) {
+            case PLACE_ENTITY: {
+                chkSolid.setEnabled(true);
+                spnMass.setEnabled(true);
+                chkVisible.setEnabled(true);
+                spnOpacity.setEnabled(true);
+                spnCGroup.setEnabled(true);
+                chkInvertX.setEnabled(true);
+                chkInvertY.setEnabled(true);
+                break;
+            }
+            case MODIFY_ENTITY: {
+                chkSolid.setEnabled(true);
+                spnMass.setEnabled(true);
+                chkVisible.setEnabled(true);
+                spnOpacity.setEnabled(true);
+                spnCGroup.setEnabled(true);
+                chkInvertX.setEnabled(true);
+                chkInvertY.setEnabled(true);
+                break;
+            }
+            case PLACE_LIGHT: {
+                chkAmbient.setEnabled(true);
+                spnRed.setEnabled(true);
+                spnGreen.setEnabled(true);
+                spnBlue.setEnabled(true);
+                spnRadius.setEnabled(true);
+                spnBrightness.setEnabled(true);
+                break;
+            }
+            case MODIFY_LIGHT: {
+                chkAmbient.setEnabled(true);
+                spnRed.setEnabled(true);
+                spnGreen.setEnabled(true);
+                spnBlue.setEnabled(true);
+                spnRadius.setEnabled(true);
+                spnBrightness.setEnabled(true);
+                break;
+            }
+            case PLACE_TRIGGER: {
+                spnHeight.setEnabled(true);
+                spnWidth.setEnabled(true);
+                break;
+            }
+            case MODIFY_TRIGGER: {
+                spnHeight.setEnabled(true);
+                spnWidth.setEnabled(true);
                 break;
             }
         }
     }
     
-    public Tile generateTile(String filePath, String name){
+    public TileSheet importTile(String filePath, String name){
+        TileSheet sheet = new TileSheet();
+        sheet.setName(name);
+        
         System.out.println(filePath);
         String defPath = filePath.substring(0, filePath.length() - 4) + "_def.png";
         System.out.println(defPath);
-        
-        Tile tile = new Tile();
-        tile.path = filePath;
-        tile.id = name;
         
         File sourceFile = new File(filePath);
         if(!sourceFile.exists()){
@@ -481,137 +1543,255 @@ public class Editor extends Engine{
             return null;
         }
         
-        Skin skin = new Skin();
-        try {
-            skin.setBaseImage(filePath);
-            skin.bufferSkinDef(defPath);
-            skin.setID(name);
-            tile.skin = skin;
-        } catch (IOException ex) {
-            Logger.getLogger(Editor.class.getName()).log(Level.SEVERE, null, ex);
-            return null;
-        }
-        return tile;
-    }
-    
-    public void compileMap(){
-        codeManager.setHeader(activeProject.getHeader());
-        codeManager.compile(nodeList, activeProject.getPath() + activeProject.getName() + ".map");
+        sheet.generate(filePath, defPath);
+        tiles.add(sheet);
+        cmbTilesheet.addItem(sheet.getName());
+        spnTile.getModel().setValue(0);
+        selectSprite();
+        return sheet;
     }
     
     public void saveProject(){
-        projectManager.saveProject(nodeList, tiles, activeProject);
+        projectManager.saveProject(items, tiles, project);
     }
     
-    public void loadProject(String input){
-        codeManager.reset();
-        nodeList.clear();
-        tiles.clear();
-        scene.getGUI().clear();
-        activeProject = new Project();
-        projectManager.loadProject(scene, activeProject, input);
+    public String getVersion(){
+        return version;
     }
-    
-    public void setEditingMode(int mode){
-        if(editingMode == mode){
-            return;
-        }
-        requestedMode = mode;
-    }
-    
-    public void setEntitySkin(Skin skin, int frame){
-        activeSkin = skin;
-        activeFrame = frame;
-        if (editingMode == 0) {
-            genEntity = true;
-        }
-    }
-    
-    public Entity getActiveEntity(){
-        return activeEntity;
-    }
-    
-    public Light getActiveDataLight(){
-        if(activeLight == null){
-            return null;
-        }
-        return (Light)activeLight.getUserData();
-    }
-    
-    public Trigger getActiveDataTrigger(){
-        return (Trigger)activeTrigger.getUserData();
-    }
-    
-    public Entity getActiveLight(){
-        return activeLight;
-    }
-    
-    public Entity getActiveTrigger(){
-        return activeTrigger;
-    }
-    
-    public void setActiveEntity(Entity entity){
-        Entity updateEntity = (Entity)entity.getUserData();
-        creationEntity.setSolid(updateEntity.isSolid());
-        creationEntity.setMass(updateEntity.getMass());
-        creationEntity.setVisible(updateEntity.isVisible());
-        creationEntity.setOpacity(updateEntity.getOpacity());
-        creationEntity.setCollisionLayer(updateEntity.getCollisionLayer());
-        creationEntity.setInvertX(updateEntity.isInvertX());
-        creationEntity.setInvertY(updateEntity.isInvertY());
-    }
-    
-    public void setActiveTrigger(Trigger trigger){
-        creationTrigger.setID(trigger.getID());
-        creationTrigger.setWidth(trigger.getWidth());
-        creationTrigger.setHeight(trigger.getHeight());
-    }
-    
-    public void setActiveLight(Light light){
-        creationLight.setId(light.getId());
-        creationLight.setAmbient(light.isAmbient());
-        creationLight.setRed(light.getRed());
-        creationLight.setGreen(light.getGreen());
-        creationLight.setBlue(light.getBlue());
-        creationLight.setRadius(light.getRadius());
-        creationLight.setBrightness(light.getBrightness());
-        activeLight.setUserData(light);
-    }
-    
-    public CodeManager getCodeManager(){
+
+    public CodeManager getCodeManager() {
         return codeManager;
     }
 
-    public ProjectUI getProjectUI() {
-        return projectUI;
+    public ArrayList<Item> getItems() {
+        return items;
     }
 
-    public Project getActiveProject() {
-        return activeProject;
-    }
-
-    public void setActiveProject(Project activeProject) {
-        this.activeProject = activeProject;
-    }
-
-    public NewProject getNewProject() {
-        return newProject;
-    }
-
-    public ArrayList<Tile> getTiles() {
+    public ArrayList<TileSheet> getTiles() {
         return tiles;
     }
 
-    public Tools getTools() {
-        return tools;
+    public Project getProject() {
+        return project;
     }
 
-    public ArrayList<Node> getNodeList() {
-        return nodeList;
+    public void setProject(Project project) {
+        resetCore();
+        this.project = project;
+        txtHeader.setText(project.getHeader());
+    }
+    
+    private void resetCore(){
+        tiles.clear();
+        items.clear();
+        activeTile = -1;
+        spnZoom.getModel().setValue(1.0f);
+        spnGrid.getModel().setValue(1);
+        cameraX = 0;
+        cameraY = 0;
+        activeItem = createNewEntity();
+        cmbTilesheet.removeAllItems();
+        spnTile.getModel().setValue(0);
+        imgPreview.setIcon(null);
+        setEditorMode(PLACE_ENTITY);
+    }
+    
+    public Item createNewEntity(){
+        if(activeTile == -1){
+            return null;
+        }
+        Item item = new Item();
+        
+        item.setType(Item.ITEM_ENTITY);
+        item.setID(txtID.getText());
+        item.setTile(tiles.get(activeTile));
+        item.setFrame((Integer) spnTile.getModel().getValue());
+        item.setSolid(chkSolid.isSelected());
+        item.setMass((Float) spnMass.getModel().getValue());
+        item.setVisible(chkVisible.isSelected());
+        item.setOpacity((Float) spnOpacity.getModel().getValue());
+        item.setCollisionLayer((Integer) spnCGroup.getModel().getValue());
+        item.setLayer((Integer) spnLayer.getModel().getValue());
+        item.setInvertX(chkInvertX.isSelected());
+        item.setInvertY(chkInvertY.isSelected());
+        codeManager.genTag(item, txtCustomTag.getText());
+        
+        return item;
+    }
+    
+    public Item createNewLight(){
+        Item item = new Item();
+        
+        item.setType(Item.ITEM_LIGHT);
+        item.setID(txtID.getText());
+        item.setAmbient(chkAmbient.isSelected());
+        item.setRed((Integer) spnRed.getModel().getValue());
+        item.setGreen((Integer) spnGreen.getModel().getValue());
+        item.setBlue((Integer) spnBlue.getModel().getValue());
+        item.setRadius((Float) spnRadius.getModel().getValue());
+        item.setBrightness((Float) spnBrightness.getModel().getValue());
+        codeManager.genTag(item, txtCustomTag.getText());
+        
+        return item;
+    }
+    
+    public Item createNewTrigger(){
+        Item item = new Item();
+        
+        item.setType(Item.ITEM_TRIGGER);
+        item.setID(txtID.getText());
+        item.setHeight((Float) spnHeight.getModel().getValue());
+        item.setWidth((Float) spnWidth.getModel().getValue());
+        codeManager.genTag(item, txtCustomTag.getText());
+        
+        return item;
     }
 
-    public Skin getIconSkin() {
-        return iconSkin;
+    public Item getActiveItem() {
+        return activeItem;
+    }
+    
+    public boolean intersect(int x, int y, Item item){
+        //convert item coords to screen space
+        int itemX = (int)item.getX() - cameraX;
+        int itemY = (int)item.getY() - cameraY;
+        
+        switch(item.getType()){
+            case Item.ITEM_ENTITY:{
+                return (x > itemX - (item.getGraphic().getWidth() / 2)) &&
+                        (x < itemX + (item.getGraphic().getWidth() / 2)) &&
+                        (y < itemY + (item.getGraphic().getHeight() / 2)) &&
+                        (y > itemY - (item.getGraphic().getHeight() / 2));
+            }
+            case Item.ITEM_TRIGGER:{
+                return (x > itemX - (item.getWidth() / 2)) &&
+                        (x < itemX + (item.getWidth() / 2)) &&
+                        (y < itemY + (item.getHeight() / 2)) &&
+                        (y > itemY - (item.getHeight() / 2));
+            }
+            case Item.ITEM_LIGHT:{
+                return (x > itemX - 8) &&
+                        (x < itemX + 8) &&
+                        (y < itemY + 8) &&
+                        (y > itemY - 8);
+            }
+        }
+        
+        return false;
     }
 
+    public float getZoom() {
+        return zoom;
+    }
+    
+    public void updateCamera(){
+        //set project header
+        if(project != null){
+            project.setHeader(txtHeader.getText());
+            this.setTitle(project.getName());
+        }
+        
+        //create mouse coords normalized to java standard coordinate space rather than game space
+        int norMouseX = (int)((mouseX * zoom) + (renderer.getWidth() / 2));
+        int norMouseY = (int)((mouseY * zoom) + (renderer.getHeight() / 2));
+        
+        if(mouseInWindow){
+            if(norMouseX < 50){
+                cameraX -= 10;
+            }else if(norMouseX > renderer.getWidth() - 50){
+                cameraX += 10;
+            }else if(norMouseY < 50){
+                cameraY -= 10;
+            }else if(norMouseY > renderer.getHeight() - 50){
+                cameraY += 10;
+            }
+        }
+    }
+
+    public int getCameraX() {
+        return cameraX;
+    }
+
+    public int getCameraY() {
+        return cameraY;
+    }
+
+    public ConfigurationManager getConfigManager() {
+        return configManager;
+    }
+    
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnAddLight;
+    private javax.swing.JButton btnAddTile;
+    private javax.swing.JButton btnAddTrigger;
+    private javax.swing.JButton btnErase;
+    private javax.swing.JButton btnExport;
+    private javax.swing.JMenuItem btnImport;
+    private javax.swing.JButton btnMove;
+    private javax.swing.JMenuItem btnNew;
+    private javax.swing.JMenuItem btnOpen;
+    private javax.swing.JButton btnResetCamera;
+    private javax.swing.JMenuItem btnSave;
+    private javax.swing.JButton btnSelect;
+    private javax.swing.JMenuItem btnTileDelete;
+    private javax.swing.JCheckBox chkAmbient;
+    private javax.swing.JCheckBox chkInvertX;
+    private javax.swing.JCheckBox chkInvertY;
+    private javax.swing.JCheckBox chkSolid;
+    private javax.swing.JCheckBox chkVisible;
+    private javax.swing.JComboBox<String> cmbTilesheet;
+    private javax.swing.JLabel imgPreview;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
+    private javax.swing.JLabel jLabel19;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JMenu jMenu1;
+    private javax.swing.JMenu jMenu2;
+    private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JSeparator jSeparator1;
+    private javax.swing.JSeparator jSeparator2;
+    private javax.swing.JSeparator jSeparator3;
+    private javax.swing.JSeparator jSeparator4;
+    private javax.swing.JTabbedPane jTabbedPane1;
+    private dingoengineleveleditor.Renderer renderer;
+    private javax.swing.JSpinner spnBlue;
+    private javax.swing.JSpinner spnBrightness;
+    private javax.swing.JSpinner spnCGroup;
+    private javax.swing.JSpinner spnGreen;
+    private javax.swing.JSpinner spnGrid;
+    private javax.swing.JSpinner spnHeight;
+    private javax.swing.JSpinner spnLayer;
+    private javax.swing.JSpinner spnMass;
+    private javax.swing.JSpinner spnOpacity;
+    private javax.swing.JSpinner spnRadius;
+    private javax.swing.JSpinner spnRed;
+    private javax.swing.JSpinner spnTile;
+    private javax.swing.JSpinner spnWidth;
+    private javax.swing.JSpinner spnZoom;
+    private javax.swing.JTextArea txtCode;
+    private javax.swing.JTextField txtCustomTag;
+    private javax.swing.JTextArea txtHeader;
+    private javax.swing.JTextField txtID;
+    // End of variables declaration//GEN-END:variables
 }

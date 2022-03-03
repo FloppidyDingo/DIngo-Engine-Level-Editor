@@ -10,17 +10,9 @@ package objects;
  * @author James
  */
 public class Project {
-    private String path;
     private String name;
+    private String path;
     private String header;
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
 
     public String getName() {
         return name;
@@ -28,6 +20,14 @@ public class Project {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
     }
 
     public String getHeader() {
