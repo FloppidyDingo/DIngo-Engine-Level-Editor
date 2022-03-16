@@ -108,6 +108,17 @@ public class Renderer extends JPanel{
                 }
             }
         }
+        
+        //render center marker
+        g.setColor(Color.red);
+        g.drawLine(-editor.getCameraX() + (this.getWidth() / 2), 
+                -editor.getCameraY() + (this.getHeight() / 2) + 10, 
+                -editor.getCameraX() + (this.getWidth() / 2), 
+                -editor.getCameraY() + (this.getHeight() / 2) - 10);
+        g.drawLine(-editor.getCameraX() + (this.getWidth() / 2) - 10, 
+                -editor.getCameraY() + (this.getHeight() / 2), 
+                -editor.getCameraX() + (this.getWidth() / 2) + 10, 
+                -editor.getCameraY() + (this.getHeight() / 2));
     }
     
 }
