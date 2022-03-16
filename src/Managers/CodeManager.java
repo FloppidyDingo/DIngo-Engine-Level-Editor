@@ -134,6 +134,8 @@ public class CodeManager {
             //run through each layer
             for(int layer = 0; layer <= maxLayer; layer++){
                 //run through each item and compile
+                writer.write("<layer layer=\"" + layer + "\">");
+                writer.newLine();
                 boolean compiled;
                 for (Item node : nodeList) {
                     //check if node was compiled already
@@ -170,6 +172,8 @@ public class CodeManager {
                         }
                     }
                 }
+                writer.write("</layer>");
+                writer.newLine();
             }
             
             //close file
