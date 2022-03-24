@@ -1415,6 +1415,12 @@ public class Editor extends javax.swing.JFrame {
         switch (activeItem.getType()) {
             case Item.ITEM_ENTITY: {
                 //entity update
+                for(int i = 0; i < cmbTilesheet.getItemCount(); i++){
+                    if(cmbTilesheet.getItemAt(i).equals(activeItem.getTile().getName())){
+                        cmbTilesheet.setSelectedIndex(i);
+                        break;
+                    }
+                }
                 txtID.setText(activeItem.getID());
                 chkSolid.setSelected(activeItem.isSolid());
                 spnMass.getModel().setValue(activeItem.getMass());
