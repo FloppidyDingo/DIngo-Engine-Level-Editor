@@ -32,7 +32,6 @@ import org.apache.commons.io.FileUtils;
  * @author James
  */
 public class Editor extends javax.swing.JFrame {
-    private final String version = "2_alpha";
     private final String version = "2";
     public static final int PLACE_ENTITY = 0;
     public static final int PLACE_LIGHT = 1;
@@ -219,6 +218,11 @@ public class Editor extends javax.swing.JFrame {
         jLabel19 = new javax.swing.JLabel();
         spnZoom = new javax.swing.JSpinner();
         btnResetCamera = new javax.swing.JButton();
+        chkCameraLock = new javax.swing.JCheckBox();
+        jLabel20 = new javax.swing.JLabel();
+        spnScreenX = new javax.swing.JSpinner();
+        jLabel21 = new javax.swing.JLabel();
+        spnScreenY = new javax.swing.JSpinner();
         renderer = new dingoengineleveleditor.Renderer();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
@@ -715,6 +719,16 @@ public class Editor extends javax.swing.JFrame {
             }
         });
 
+        chkCameraLock.setText("Lock Camera");
+
+        jLabel20.setText("Mock Screen:");
+
+        spnScreenX.setModel(new javax.swing.SpinnerNumberModel(0, 0, null, 1));
+
+        jLabel21.setText("X");
+
+        spnScreenY.setModel(new javax.swing.SpinnerNumberModel(0, 0, null, 1));
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -730,8 +744,19 @@ public class Editor extends javax.swing.JFrame {
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(spnGrid, javax.swing.GroupLayout.DEFAULT_SIZE, 50, Short.MAX_VALUE)
                             .addComponent(spnZoom)))
-                    .addComponent(btnResetCamera))
-                .addContainerGap(179, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(chkCameraLock)
+                        .addGap(18, 18, 18)
+                        .addComponent(btnResetCamera))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(spnScreenX, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel20, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel21)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(spnScreenY, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(77, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -745,8 +770,17 @@ public class Editor extends javax.swing.JFrame {
                     .addComponent(jLabel19)
                     .addComponent(spnZoom, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addComponent(btnResetCamera)
-                .addContainerGap(671, Short.MAX_VALUE))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(chkCameraLock)
+                    .addComponent(btnResetCamera))
+                .addGap(18, 18, 18)
+                .addComponent(jLabel20)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(spnScreenX, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel21)
+                    .addComponent(spnScreenY, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(613, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Settings", jPanel1);
@@ -1703,7 +1737,7 @@ public class Editor extends javax.swing.JFrame {
         int norMouseX = (int)((mouseX * zoom) + (renderer.getWidth() / 2));
         int norMouseY = (int)((mouseY * zoom) + (renderer.getHeight() / 2));
         
-        if(mouseInWindow){
+        if(mouseInWindow && !chkCameraLock.isSelected()){
             if(norMouseX < 50){
                 cameraX -= 10;
             }else if(norMouseX > renderer.getWidth() - 50){
@@ -1728,6 +1762,14 @@ public class Editor extends javax.swing.JFrame {
         return configManager;
     }
     
+    public int getScreenX(){
+        return (Integer)spnScreenX.getModel().getValue();
+    }
+    
+    public int getScreenY(){
+        return (Integer)spnScreenY.getModel().getValue();
+    }
+    
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnAddLight;
@@ -1744,6 +1786,7 @@ public class Editor extends javax.swing.JFrame {
     private javax.swing.JButton btnSelect;
     private javax.swing.JMenuItem btnTileDelete;
     private javax.swing.JCheckBox chkAmbient;
+    private javax.swing.JCheckBox chkCameraLock;
     private javax.swing.JCheckBox chkInvertX;
     private javax.swing.JCheckBox chkInvertY;
     private javax.swing.JCheckBox chkSolid;
@@ -1762,6 +1805,8 @@ public class Editor extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel18;
     private javax.swing.JLabel jLabel19;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel20;
+    private javax.swing.JLabel jLabel21;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
@@ -1794,6 +1839,8 @@ public class Editor extends javax.swing.JFrame {
     private javax.swing.JSpinner spnOpacity;
     private javax.swing.JSpinner spnRadius;
     private javax.swing.JSpinner spnRed;
+    private javax.swing.JSpinner spnScreenX;
+    private javax.swing.JSpinner spnScreenY;
     private javax.swing.JSpinner spnTile;
     private javax.swing.JSpinner spnWidth;
     private javax.swing.JSpinner spnZoom;

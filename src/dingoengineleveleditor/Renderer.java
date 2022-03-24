@@ -119,6 +119,13 @@ public class Renderer extends JPanel{
                 -editor.getCameraY() + (this.getHeight() / 2), 
                 -editor.getCameraX() + (this.getWidth() / 2) + 10, 
                 -editor.getCameraY() + (this.getHeight() / 2));
+        
+        //render screen border
+        g.setColor(Color.green);
+        g.drawRect((int)(-editor.getCameraX() * zoom) + (this.getWidth() / 2) - (int)(editor.getScreenX() * zoom / 2),
+                (int)(-editor.getCameraY() * zoom) + (this.getHeight() / 2) - (int)(editor.getScreenY() * zoom / 2),
+                (int)(editor.getScreenX() * zoom),
+                (int)(editor.getScreenY() * zoom));
     }
     
 }
