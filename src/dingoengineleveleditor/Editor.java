@@ -14,6 +14,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
@@ -879,7 +880,7 @@ public class Editor extends javax.swing.JFrame {
             System.out.println("Copying " + source + " to " + dest);
             try {
                 if(!source.equals(dest)){
-                    FileUtils.copyFile(new File(source), new File(dest));
+                    FileUtils.copyFile(new File(source), new File(dest), StandardCopyOption.REPLACE_EXISTING);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -890,7 +891,7 @@ public class Editor extends javax.swing.JFrame {
             System.out.println("Copying " + source + " to " + dest);
             try {
                 if(!source.equals(dest)){
-                    FileUtils.copyFile(new File(source), new File(dest));
+                    FileUtils.copyFile(new File(source), new File(dest), StandardCopyOption.REPLACE_EXISTING);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
