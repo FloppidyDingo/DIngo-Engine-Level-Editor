@@ -47,11 +47,21 @@ public class Renderer extends JPanel{
                 switch(item.getType()){
                     case Item.ITEM_ENTITY:{
                         if(item.getLayer() == layer){
+                            if(item.isInvertX()){
+                                invX = -1;
+                            }else {
+                                invX = 1;
+                            }
+                            if(item.isInvertY()){
+                                invY = -1;
+                            }else {
+                                invY = 1;
+                            }
                             g.drawImage(item.getGraphic(), 
-                                    (int)(((item.getX() - editor.getCameraX()) * zoom) + (this.getWidth() / 2) - (item.getGraphic().getWidth() * zoom / 2)),
-                                    (int)(((item.getY() - editor.getCameraY()) * zoom) + (this.getHeight() / 2) - (item.getGraphic().getHeight() * zoom / 2)),
-                                    (int)(item.getGraphic().getWidth() * zoom),
-                                    (int)(item.getGraphic().getHeight() * zoom), null);
+                                    (int)(((item.getX() - editor.getCameraX()) * zoom) + (this.getWidth() / 2) - (item.getGraphic().getWidth() * invX * zoom / 2)),
+                                    (int)(((item.getY() - editor.getCameraY()) * zoom) + (this.getHeight() / 2) - (item.getGraphic().getHeight() * invY * zoom / 2)),
+                                    invX * (int)(item.getGraphic().getWidth() * zoom),
+                                    invY * (int)(item.getGraphic().getHeight() * zoom), null);
                         }
                         
                         break;
@@ -85,11 +95,22 @@ public class Renderer extends JPanel{
         if(item != null && (editor.getEditorMode() == Editor.PLACE_ENTITY || editor.getEditorMode() == Editor.PLACE_LIGHT || editor.getEditorMode() == Editor.PLACE_TRIGGER)){
             switch(item.getType()){
                 case Item.ITEM_ENTITY:{
+                    if (item.isInvertX()) {
+                        invX = -1;
+                    } else {
+                        invX = 1;
+                    }
+                    if (item.isInvertY()) {
+                        invY = -1;
+                    } else {
+                        invY = 1;
+                    }
                     g.drawImage(item.getGraphic(), 
-                            (int)(((item.getX() - editor.getCameraX()) * zoom) + (this.getWidth() / 2) - (item.getGraphic().getWidth() * zoom / 2)),
-                            (int)(((item.getY() - editor.getCameraY()) * zoom) + (this.getHeight() / 2) - (item.getGraphic().getHeight() * zoom / 2)),
-                            (int)(item.getGraphic().getWidth() * zoom),
-                            (int)(item.getGraphic().getHeight() * zoom), null);
+                            (int)(((item.getX() - editor.getCameraX()) * zoom) + (this.getWidth() / 2) - (item.getGraphic().getWidth() * invX * zoom / 2)),
+                            (int)(((item.getY() - editor.getCameraY()) * zoom) + (this.getHeight() / 2) - (item.getGraphic().getHeight() * invY * zoom / 2)),
+                            invX * (int)(item.getGraphic().getWidth() * zoom),
+                            invY * (int)(item.getGraphic().getHeight() * zoom), null);
+                    
                     break;
                 }
                 case Item.ITEM_LIGHT:{
