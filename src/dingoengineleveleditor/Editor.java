@@ -1730,7 +1730,12 @@ public class Editor extends javax.swing.JFrame {
         //set project header
         if(project != null){
             project.setHeader(txtHeader.getText());
-            this.setTitle(project.getName());
+            if(activeItem != null){
+                this.setTitle(project.getName() + " | " + activeItem.getX() + ", " + activeItem.getY());
+            }else{
+                this.setTitle(project.getName());
+            }
+            
         }
         
         //create mouse coords normalized to java standard coordinate space rather than game space

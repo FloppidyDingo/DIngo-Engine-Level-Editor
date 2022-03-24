@@ -25,6 +25,9 @@ public class Renderer extends JPanel{
     public void paintComponent(Graphics g){
         super.paintComponent(g);
         
+        int invX = 1;
+        int invY = 1;
+        
         //render placed items
         if(editor == null){
             return;
