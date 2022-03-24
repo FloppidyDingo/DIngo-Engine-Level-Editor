@@ -33,6 +33,7 @@ import org.apache.commons.io.FileUtils;
  */
 public class Editor extends javax.swing.JFrame {
     private final String version = "2_alpha";
+    private final String version = "2";
     public static final int PLACE_ENTITY = 0;
     public static final int PLACE_LIGHT = 1;
     public static final int PLACE_TRIGGER = 2;
