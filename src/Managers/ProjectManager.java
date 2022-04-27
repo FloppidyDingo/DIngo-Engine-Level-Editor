@@ -143,8 +143,8 @@ public class ProjectManager {
                         trigger.setID(reader.readLine());
                         trigger.setX(Float.parseFloat(reader.readLine()));
                         trigger.setY(Float.parseFloat(reader.readLine()));
-                        trigger.setWidth(Float.parseFloat(reader.readLine()));
-                        trigger.setHeight(Float.parseFloat(reader.readLine()));
+                        trigger.setWidth(Integer.parseInt(reader.readLine()));
+                        trigger.setHeight(Integer.parseInt(reader.readLine()));
                         
                         //read custom tag
                         String tagInput = reader.readLine();
@@ -210,9 +210,9 @@ public class ProjectManager {
                         writer.newLine();
                         writer.write(Float.toString(node.getY()));
                         writer.newLine();
-                        writer.write(Float.toString(node.getWidth()));
+                        writer.write(Integer.toString(node.getWidth()));
                         writer.newLine();
-                        writer.write(Float.toString(node.getHeight()));
+                        writer.write(Integer.toString(node.getHeight()));
                         writer.newLine();
                         writer.write(node.getCodeTag().getCustomTag());
                         writer.newLine();

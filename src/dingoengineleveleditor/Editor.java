@@ -32,7 +32,7 @@ import org.apache.commons.io.FileUtils;
  * @author James
  */
 public class Editor extends javax.swing.JFrame {
-    private final String version = "2";
+    private final String version = "2.1";
     public static final int PLACE_ENTITY = 0;
     public static final int PLACE_LIGHT = 1;
     public static final int PLACE_TRIGGER = 2;
@@ -278,7 +278,7 @@ public class Editor extends javax.swing.JFrame {
 
         jLabel16.setText("Custom Tag:");
 
-        spnHeight.setModel(new javax.swing.SpinnerNumberModel(1.0f, 0.0f, null, 1.0f));
+        spnHeight.setModel(new javax.swing.SpinnerNumberModel(1, 0, null, 1));
         spnHeight.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
                 spnHeightStateChanged(evt);
@@ -287,7 +287,7 @@ public class Editor extends javax.swing.JFrame {
 
         jLabel8.setText("Width:");
 
-        spnWidth.setModel(new javax.swing.SpinnerNumberModel(1.0f, 0.0f, null, 1.0f));
+        spnWidth.setModel(new javax.swing.SpinnerNumberModel(1, 0, null, 1));
         spnWidth.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
                 spnWidthStateChanged(evt);
@@ -1682,8 +1682,8 @@ public class Editor extends javax.swing.JFrame {
         
         item.setType(Item.ITEM_TRIGGER);
         item.setID(txtID.getText());
-        item.setHeight((Float) spnHeight.getModel().getValue());
-        item.setWidth((Float) spnWidth.getModel().getValue());
+        item.setHeight((Integer) spnHeight.getModel().getValue());
+        item.setWidth((Integer) spnWidth.getModel().getValue());
         codeManager.genTag(item, txtCustomTag.getText());
         
         return item;

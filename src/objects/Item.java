@@ -20,8 +20,8 @@ public class Item {
     private int type;
     
     private String ID;
-    private float width;
-    private float height;
+    private int width;
+    private int height;
     private boolean ambient;
     private float brightness;
     private float radius;
@@ -61,19 +61,19 @@ public class Item {
         this.type = type;
     }
 
-    public float getWidth() {
+    public int getWidth() {
         return width;
     }
 
-    public void setWidth(float width) {
+    public void setWidth(int width) {
         this.width = width;
     }
 
-    public float getHeight() {
+    public int getHeight() {
         return height;
     }
 
-    public void setHeight(float height) {
+    public void setHeight(int height) {
         this.height = height;
     }
 
