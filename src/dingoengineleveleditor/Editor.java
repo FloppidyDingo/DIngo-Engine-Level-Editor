@@ -10,8 +10,10 @@ import Managers.CodeManager;
 import Managers.ConfigurationManager;
 import Managers.ProjectManager;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.StandardCopyOption;
@@ -51,14 +53,15 @@ public class Editor extends javax.swing.JFrame {
     private int editorMode;
     private final ArrayList<TileSheet> tiles;
     private final ArrayList<Item> items;
-    int mouseX;
-    int mouseY;
-    int cameraX;
-    int cameraY;
-    int gridSnap;
-    float zoom;
-    boolean mouseInWindow;
-    boolean disallowModification;
+    private int mouseX;
+    private int mouseY;
+    private int cameraX;
+    private int cameraY;
+    private int gridSnap;
+    private float zoom;
+    private boolean disallowModification;
+    private boolean panActive;
+    private Point panStart;
     
     private Item activeItem;
     private int activeTile;
@@ -85,6 +88,8 @@ public class Editor extends javax.swing.JFrame {
         cameraY = 0;
         disallowModification = false;
         configManager.loadConfig();
+        panActive = false;
+        panStart = new Point();
 
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
@@ -215,10 +220,7 @@ public class Editor extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
         spnGrid = new javax.swing.JSpinner();
-        jLabel19 = new javax.swing.JLabel();
-        spnZoom = new javax.swing.JSpinner();
         btnResetCamera = new javax.swing.JButton();
-        chkCameraLock = new javax.swing.JCheckBox();
         jLabel20 = new javax.swing.JLabel();
         spnScreenX = new javax.swing.JSpinner();
         jLabel21 = new javax.swing.JLabel();
@@ -703,23 +705,12 @@ public class Editor extends javax.swing.JFrame {
             }
         });
 
-        jLabel19.setText("Zoom:");
-
-        spnZoom.setModel(new javax.swing.SpinnerNumberModel(1.0f, 0.1f, null, 0.5f));
-        spnZoom.addChangeListener(new javax.swing.event.ChangeListener() {
-            public void stateChanged(javax.swing.event.ChangeEvent evt) {
-                spnZoomStateChanged(evt);
-            }
-        });
-
         btnResetCamera.setText("Reset Camera");
         btnResetCamera.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnResetCameraActionPerformed(evt);
             }
         });
-
-        chkCameraLock.setText("Lock Camera");
 
         jLabel20.setText("Mock Screen:");
 
@@ -737,26 +728,18 @@ public class Editor extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel3)
-                            .addComponent(jLabel19))
+                        .addComponent(jLabel3)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(spnGrid, javax.swing.GroupLayout.DEFAULT_SIZE, 50, Short.MAX_VALUE)
-                            .addComponent(spnZoom)))
+                        .addComponent(spnGrid, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnResetCamera)
+                    .addComponent(jLabel20)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(chkCameraLock)
-                        .addGap(18, 18, 18)
-                        .addComponent(btnResetCamera))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(spnScreenX, javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel20, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(spnScreenX, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jLabel21)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(spnScreenY, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(77, Short.MAX_VALUE))
+                .addContainerGap(141, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -765,39 +748,35 @@ public class Editor extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
                     .addComponent(spnGrid, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel19)
-                    .addComponent(spnZoom, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(chkCameraLock)
-                    .addComponent(btnResetCamera))
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btnResetCamera)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel20)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(spnScreenX, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel21)
-                    .addComponent(spnScreenY, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(613, Short.MAX_VALUE))
+                    .addComponent(spnScreenY, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel21))
+                .addContainerGap(675, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Settings", jPanel1);
 
         renderer.setBackground(new java.awt.Color(0, 0, 0));
         renderer.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            public void mouseDragged(java.awt.event.MouseEvent evt) {
+                rendererMouseDragged(evt);
+            }
             public void mouseMoved(java.awt.event.MouseEvent evt) {
                 rendererMouseMoved(evt);
             }
         });
+        renderer.addMouseWheelListener(new java.awt.event.MouseWheelListener() {
+            public void mouseWheelMoved(java.awt.event.MouseWheelEvent evt) {
+                rendererMouseWheelMoved(evt);
+            }
+        });
         renderer.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                rendererMouseEntered(evt);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                rendererMouseExited(evt);
-            }
             public void mousePressed(java.awt.event.MouseEvent evt) {
                 rendererMousePressed(evt);
             }
@@ -1221,100 +1200,107 @@ public class Editor extends javax.swing.JFrame {
         
         int msX = evt.getX() - (renderer.getWidth() / 2);
         int msY = evt.getY() - (renderer.getHeight() / 2);
-        
         //adjust coordninates for zoom
         msX = (int)(msX / zoom);
         msY = (int)(msY / zoom);
+        //get mouse button
+        int mouseButton = evt.getButton();
         
-        switch(editorMode){
-            case PLACE_ENTITY:{
-                if(activeItem == null){
-                    return;
+        if(mouseButton == MouseEvent.BUTTON1){
+            switch(editorMode){
+                case PLACE_ENTITY:{
+                    if(activeItem == null){
+                        return;
+                    }
+                    items.add(activeItem);
+                    activeItem = createNewEntity();
+                    activeItem.setX(mouseX + cameraX);
+                    activeItem.setY(mouseY + cameraY);
+                    break;
                 }
-                items.add(activeItem);
-                activeItem = createNewEntity();
-                activeItem.setX(mouseX + cameraX);
-                activeItem.setY(mouseY + cameraY);
-                break;
-            }
-            case PLACE_LIGHT:{
-                if(activeItem == null){
-                    return;
+                case PLACE_LIGHT:{
+                    if(activeItem == null){
+                        return;
+                    }
+                    items.add(activeItem);
+                    activeItem = createNewLight();
+                    activeItem.setX(mouseX + cameraX);
+                    activeItem.setY(mouseY + cameraY);
+                    break;
                 }
-                items.add(activeItem);
-                activeItem = createNewLight();
-                activeItem.setX(mouseX + cameraX);
-                activeItem.setY(mouseY + cameraY);
-                break;
-            }
-            case PLACE_TRIGGER:{
-                if(activeItem == null){
-                    return;
+                case PLACE_TRIGGER:{
+                    if(activeItem == null){
+                        return;
+                    }
+                    items.add(activeItem);
+                    activeItem = createNewTrigger();
+                    activeItem.setX(mouseX + cameraX);
+                    activeItem.setY(mouseY + cameraY);
+                    break;
                 }
-                items.add(activeItem);
-                activeItem = createNewTrigger();
-                activeItem.setX(mouseX + cameraX);
-                activeItem.setY(mouseY + cameraY);
-                break;
-            }
-            case MOVE:{
-                if(activeItem == null){
+                case MOVE:{
+                    if(activeItem == null){
+                        for(Item item : items){
+                            if(intersect(msX, msY, item)){
+                                activeItem = item;
+                                break;
+                            }
+                        }
+                    }else{
+                        activeItem = null;
+                    }
+                    break;
+                }
+                case ERASE:{
                     for(Item item : items){
                         if(intersect(msX, msY, item)){
                             activeItem = item;
                             break;
                         }
                     }
-                }else{
+                    if(activeItem == null){
+                        return;
+                    }
+                    items.remove(activeItem);
                     activeItem = null;
+                    break;
                 }
-                break;
+                case MODIFY_ENTITY:{}
+                case MODIFY_TRIGGER:{}
+                case MODIFY_LIGHT:{}
+                case SELECT:{
+                    for(Item item : items){
+                        if(intersect(msX, msY, item)){
+                            activeItem = item;
+                            break;
+                        }
+                    }
+                    if(activeItem == null){
+                        return;
+                    }
+                    switch(activeItem.getType()){
+                        case Item.ITEM_ENTITY:{
+                            setEditorMode(MODIFY_ENTITY);
+                            break;
+                        }
+                        case Item.ITEM_LIGHT:{
+                            setEditorMode(MODIFY_LIGHT);
+                            break;
+                        }
+                        case Item.ITEM_TRIGGER:{
+                            setEditorMode(MODIFY_TRIGGER);
+                            break;
+                        }
+                    }
+                    updateUI();
+                    break;
+                }
             }
-            case ERASE:{
-                for(Item item : items){
-                    if(intersect(msX, msY, item)){
-                        activeItem = item;
-                        break;
-                    }
-                }
-                if(activeItem == null){
-                    return;
-                }
-                items.remove(activeItem);
-                activeItem = null;
-                break;
-            }
-            case MODIFY_ENTITY:{}
-            case MODIFY_TRIGGER:{}
-            case MODIFY_LIGHT:{}
-            case SELECT:{
-                for(Item item : items){
-                    if(intersect(msX, msY, item)){
-                        activeItem = item;
-                        break;
-                    }
-                }
-                if(activeItem == null){
-                    return;
-                }
-                switch(activeItem.getType()){
-                    case Item.ITEM_ENTITY:{
-                        setEditorMode(MODIFY_ENTITY);
-                        break;
-                    }
-                    case Item.ITEM_LIGHT:{
-                        setEditorMode(MODIFY_LIGHT);
-                        break;
-                    }
-                    case Item.ITEM_TRIGGER:{
-                        setEditorMode(MODIFY_TRIGGER);
-                        break;
-                    }
-                }
-                updateUI();
-                break;
-            }
+        }else if(evt.getButton() == MouseEvent.BUTTON2){
+            panActive = true;
+            panStart.setLocation(evt.getPoint());
         }
+        
     }//GEN-LAST:event_rendererMousePressed
 
     private void btnExportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportActionPerformed
@@ -1331,22 +1317,8 @@ public class Editor extends javax.swing.JFrame {
     private void rendererMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseReleased
         // TODO add your handling code here:
         disallowModification = false;
+        panActive = false;
     }//GEN-LAST:event_rendererMouseReleased
-
-    private void spnZoomStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spnZoomStateChanged
-        // TODO add your handling code here:
-        zoom = (Float)spnZoom.getModel().getValue();
-    }//GEN-LAST:event_spnZoomStateChanged
-
-    private void rendererMouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseEntered
-        // TODO add your handling code here:
-        mouseInWindow = true;
-    }//GEN-LAST:event_rendererMouseEntered
-
-    private void rendererMouseExited(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseExited
-        // TODO add your handling code here:
-        mouseInWindow = false;
-    }//GEN-LAST:event_rendererMouseExited
 
     private void btnResetCameraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnResetCameraActionPerformed
         // TODO add your handling code here:
@@ -1359,6 +1331,24 @@ public class Editor extends javax.swing.JFrame {
         configManager.saveConfig();
         System.exit(0);
     }//GEN-LAST:event_formWindowClosing
+
+    private void rendererMouseWheelMoved(java.awt.event.MouseWheelEvent evt) {//GEN-FIRST:event_rendererMouseWheelMoved
+        // TODO add your handling code here:
+        //zoom out if positive, in if negative
+        zoom -= (float)evt.getWheelRotation() * 0.25f;
+        if(zoom <= 0){
+            zoom = 0.25f;
+        }
+    }//GEN-LAST:event_rendererMouseWheelMoved
+
+    private void rendererMouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_rendererMouseDragged
+        // TODO add your handling code here:
+        if(panActive){
+            cameraX += (int)(panStart.getX() - evt.getX());
+            cameraY += (int)(panStart.getY() - evt.getY());
+            panStart.setLocation(evt.getPoint());
+        }
+    }//GEN-LAST:event_rendererMouseDragged
 
     public void selectSprite() {
         String targetTile = cmbTilesheet.getItemAt(cmbTilesheet.getSelectedIndex());
@@ -1627,7 +1617,6 @@ public class Editor extends javax.swing.JFrame {
         tiles.clear();
         items.clear();
         activeTile = -1;
-        spnZoom.getModel().setValue(1.0f);
         spnGrid.getModel().setValue(1);
         cameraX = 0;
         cameraY = 0;
@@ -1726,7 +1715,7 @@ public class Editor extends javax.swing.JFrame {
         return zoom;
     }
     
-    public void updateCamera(){
+    public void update(){
         //set project header
         if(project != null){
             project.setHeader(txtHeader.getText());
@@ -1734,23 +1723,6 @@ public class Editor extends javax.swing.JFrame {
                 this.setTitle(project.getName() + " | " + activeItem.getX() + ", " + activeItem.getY());
             }else{
                 this.setTitle(project.getName());
-            }
-            
-        }
-        
-        //create mouse coords normalized to java standard coordinate space rather than game space
-        int norMouseX = (int)((mouseX * zoom) + (renderer.getWidth() / 2));
-        int norMouseY = (int)((mouseY * zoom) + (renderer.getHeight() / 2));
-        
-        if(mouseInWindow && !chkCameraLock.isSelected()){
-            if(norMouseX < 50){
-                cameraX -= 10;
-            }else if(norMouseX > renderer.getWidth() - 50){
-                cameraX += 10;
-            }else if(norMouseY < 50){
-                cameraY -= 10;
-            }else if(norMouseY > renderer.getHeight() - 50){
-                cameraY += 10;
             }
         }
     }
@@ -1791,7 +1763,6 @@ public class Editor extends javax.swing.JFrame {
     private javax.swing.JButton btnSelect;
     private javax.swing.JMenuItem btnTileDelete;
     private javax.swing.JCheckBox chkAmbient;
-    private javax.swing.JCheckBox chkCameraLock;
     private javax.swing.JCheckBox chkInvertX;
     private javax.swing.JCheckBox chkInvertY;
     private javax.swing.JCheckBox chkSolid;
@@ -1808,7 +1779,6 @@ public class Editor extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel17;
     private javax.swing.JLabel jLabel18;
-    private javax.swing.JLabel jLabel19;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel21;
@@ -1848,7 +1818,6 @@ public class Editor extends javax.swing.JFrame {
     private javax.swing.JSpinner spnScreenY;
     private javax.swing.JSpinner spnTile;
     private javax.swing.JSpinner spnWidth;
-    private javax.swing.JSpinner spnZoom;
     private javax.swing.JTextArea txtCode;
     private javax.swing.JTextField txtCustomTag;
     private javax.swing.JTextArea txtHeader;

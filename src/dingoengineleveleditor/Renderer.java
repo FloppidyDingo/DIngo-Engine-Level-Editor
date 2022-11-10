@@ -33,7 +33,7 @@ public class Renderer extends JPanel{
             return;
         }
         
-        editor.updateCamera();
+        editor.update();
         float zoom = editor.getZoom();
         
         //determine number of layers
