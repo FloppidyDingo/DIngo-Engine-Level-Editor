@@ -1176,6 +1176,17 @@ public class Editor extends javax.swing.JFrame {
                 int placeX = mouseX + cameraX;
                 int placeY = mouseY + cameraY;
                 
+                if(placeX > 0){
+                    placeX += gridSnap / 2;
+                }else if(placeX < 0){
+                    placeX -= gridSnap / 2;
+                }
+                if(placeY > 0){
+                    placeY += gridSnap / 2;
+                }else if(placeY < 0){
+                    placeY -= gridSnap / 2;
+                }
+                
                 placeX = placeX / gridSnap;
                 placeX = placeX * gridSnap;
                 placeY = placeY / gridSnap;
